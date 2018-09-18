@@ -25,6 +25,7 @@
       <object class="GtkStack" id="stack_connection_stage">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
+        <property name="transition_type">slide-left</property>
         <child>
           <object class="GtkGrid">
             <property name="visible">True</property>
@@ -583,7 +584,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="GtkButton">
+                                      <object class="GtkButton" id="button_loadout_remove">
                                         <property name="label">gtk-remove</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -598,7 +599,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="GtkButton">
+                                      <object class="GtkButton" id="button_loadout_edit">
                                         <property name="label">gtk-edit</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
