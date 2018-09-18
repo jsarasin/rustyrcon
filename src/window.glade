@@ -4,7 +4,7 @@
   <requires lib="gtk+" version="3.18"/>
   <object class="GtkWindow" id="window">
     <property name="width_request">820</property>
-    <property name="height_request">760</property>
+    <property name="height_request">558</property>
     <property name="can_focus">False</property>
     <child type="titlebar">
       <object class="GtkHeaderBar">
@@ -203,6 +203,7 @@
               <object class="GtkStack" id="stack_rcon">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <property name="border_width">3</property>
                 <child>
                   <object class="GtkBox">
                     <property name="visible">True</property>
@@ -227,11 +228,13 @@
                                 <property name="can_focus">True</property>
                                 <property name="pixels_above_lines">2</property>
                                 <property name="pixels_below_lines">2</property>
+                                <property name="editable">False</property>
                                 <property name="wrap_mode">word-char</property>
                                 <property name="left_margin">2</property>
                                 <property name="right_margin">2</property>
                                 <property name="top_margin">2</property>
                                 <property name="bottom_margin">2</property>
+                                <property name="cursor_visible">False</property>
                               </object>
                             </child>
                           </object>
@@ -510,6 +513,7 @@
                                 <property name="can_focus">False</property>
                                 <property name="hexpand">True</property>
                                 <property name="vexpand">True</property>
+                                <property name="spacing">5</property>
                                 <child>
                                   <object class="GtkScrolledWindow">
                                     <property name="name">s</property>
@@ -546,6 +550,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <property name="orientation">vertical</property>
+                                    <property name="spacing">3</property>
                                     <property name="layout_style">start</property>
                                     <child>
                                       <object class="GtkButton" id="button_loadout_add">

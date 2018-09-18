@@ -4,7 +4,7 @@
   <requires lib="gtk+" version="3.18"/>
   <object class="GtkWindow" id="window">
     <property name="width_request">820</property>
-    <property name="height_request">760</property>
+    <property name="height_request">558</property>
     <property name="can_focus">False</property>
     <child type="titlebar">
       <object class="GtkHeaderBar">
@@ -49,22 +49,11 @@
               <object class="GtkLabel">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="label" translatable="yes">Username</property>
-              </object>
-              <packing>
-                <property name="left_attach">0</property>
-                <property name="top_attach">1</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkLabel">
-                <property name="visible">True</property>
-                <property name="can_focus">False</property>
                 <property name="label" translatable="yes">Password</property>
               </object>
               <packing>
                 <property name="left_attach">0</property>
-                <property name="top_attach">2</property>
+                <property name="top_attach">1</property>
               </packing>
             </child>
             <child>
@@ -113,23 +102,13 @@
               </packing>
             </child>
             <child>
-              <object class="GtkEntry" id="textentry_username">
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-              </object>
-              <packing>
-                <property name="left_attach">1</property>
-                <property name="top_attach">1</property>
-              </packing>
-            </child>
-            <child>
               <object class="GtkEntry" id="textentry_password">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
               </object>
               <packing>
                 <property name="left_attach">1</property>
-                <property name="top_attach">2</property>
+                <property name="top_attach">1</property>
               </packing>
             </child>
             <child>
@@ -156,7 +135,7 @@
               </object>
               <packing>
                 <property name="left_attach">0</property>
-                <property name="top_attach">3</property>
+                <property name="top_attach">2</property>
                 <property name="width">2</property>
               </packing>
             </child>
@@ -224,6 +203,7 @@
               <object class="GtkStack" id="stack_rcon">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <property name="border_width">3</property>
                 <child>
                   <object class="GtkBox">
                     <property name="visible">True</property>
@@ -531,6 +511,7 @@
                                 <property name="can_focus">False</property>
                                 <property name="hexpand">True</property>
                                 <property name="vexpand">True</property>
+                                <property name="spacing">5</property>
                                 <child>
                                   <object class="GtkScrolledWindow">
                                     <property name="name">s</property>
@@ -567,6 +548,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
                                     <property name="orientation">vertical</property>
+                                    <property name="spacing">3</property>
                                     <property name="layout_style">start</property>
                                     <child>
                                       <object class="GtkButton" id="button_loadout_add">
