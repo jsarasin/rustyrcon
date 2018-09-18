@@ -71,7 +71,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <child>
-                  <object class="GtkEntry">
+                  <object class="GtkEntry" id="textentry_server_address">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                   </object>
@@ -87,9 +87,17 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="active">0</property>
+                    <property name="has_entry">True</property>
                     <items>
                       <item translatable="yes">20807</item>
                     </items>
+                    <child internal-child="entry">
+                      <object class="GtkEntry" id="textentry_server_port">
+                        <property name="can_focus">False</property>
+                        <property name="truncate_multiline">True</property>
+                        <property name="caps_lock_warning">False</property>
+                      </object>
+                    </child>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -104,7 +112,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkEntry">
+              <object class="GtkEntry" id="textentry_username">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
               </object>
@@ -114,7 +122,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkEntry">
+              <object class="GtkEntry" id="textentry_password">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
               </object>
@@ -128,7 +136,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <child>
-                  <object class="GtkButton">
+                  <object class="GtkButton" id="button_connect">
                     <property name="label" translatable="yes">Connect</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
