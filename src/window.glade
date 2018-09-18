@@ -25,6 +25,7 @@
       <object class="GtkStack" id="stack_connection_stage">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
+        <property name="transition_type">slide-left</property>
         <child>
           <object class="GtkGrid">
             <property name="visible">True</property>
@@ -292,7 +293,7 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkColorButton">
+                          <object class="GtkColorButton" id="buttoncolor_chat">
                             <property name="name">colorbutton_chat</property>
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
@@ -514,7 +515,7 @@
                                 <property name="can_focus">False</property>
                                 <property name="has_entry">True</property>
                                 <child internal-child="entry">
-                                  <object class="GtkEntry">
+                                  <object class="GtkEntry" id="textentry_receiving_player">
                                     <property name="can_focus">True</property>
                                   </object>
                                 </child>
@@ -544,7 +545,7 @@
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
                                         <child>
-                                          <object class="GtkTreeView">
+                                          <object class="GtkTreeView" id="treeview_loadout_item_list">
                                             <property name="visible">True</property>
                                             <property name="can_focus">True</property>
                                             <child internal-child="selection">
@@ -568,7 +569,7 @@
                                     <property name="orientation">vertical</property>
                                     <property name="layout_style">start</property>
                                     <child>
-                                      <object class="GtkButton">
+                                      <object class="GtkButton" id="button_loadout_add">
                                         <property name="label">gtk-add</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -583,7 +584,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="GtkButton">
+                                      <object class="GtkButton" id="button_loadout_remove">
                                         <property name="label">gtk-remove</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
@@ -598,7 +599,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="GtkButton">
+                                      <object class="GtkButton" id="button_loadout_edit">
                                         <property name="label">gtk-edit</property>
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
