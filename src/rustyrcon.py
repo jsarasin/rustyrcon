@@ -22,6 +22,8 @@ class BufferManager:
 class MainWindow:
     def __init__(self):
         self.pyrcon = None
+
+        # Chat message globals
         self.first_chat_message = True
 
         self.connect_builder_objects()
@@ -60,12 +62,14 @@ class MainWindow:
         self.buttoncolor_chat = builder.get_object("buttoncolor_chat")
         self.textentry_chat_message = builder.get_object("textentry_chat_message")
         self.textentry_chat_message.connect('activate', self.send_chat_message)
+        self.button_italic = builder.get_object("button_italic")
+        self.scalebutton_text_size = builder.get_object("scalebutton_text_size")
         self.button_chat_send = builder.get_object("button_chat_send")
         self.button_chat_send.connect("clicked", self.send_chat_message)
         self.textview_chat = builder.get_object("textview_chat")
         self.textbuffer_chat = BetterBuffer()
         self.textbuffer_chat.create_tag("peasant_chat", paragraph_background="lightgreen", wrap_mode=Gtk.WrapMode.WORD_CHAR, foreground='Black')
-        self.textbuffer_chat.create_tag("peasant_uname", weight=Pango.Weight.BOLD, foreground='Black' )
+        self.textbuffer_chat.create_tag("peasant_uname", weight=Pango.Weight.BOLD, foreground='Black')
         self.textbuffer_chat.create_tag("server_chat", paragraph_background="lightblue", wrap_mode=Gtk.WrapMode.WORD_CHAR, foreground='Black')
         self.textbuffer_chat.create_tag("server_uname", weight=Pango.Weight.BOLD, foreground='Black' )
         self.textview_chat.set_buffer(self.textbuffer_chat)
@@ -195,12 +199,16 @@ class MainWindow:
 
         last_iter = self.textbuffer_chat.get_end_iter()
         begin_chat_mark = self.textbuffer_chat.create_mark(None, last_iter, True)
-        self.textbuffer_chat.insert(last_iter, username)
+        self.textbuffer_chat.insert(last_iter, "" + username)
         last_iter = self.textbuffer_chat.get_end_iter()
         self.textbuffer_chat.insert(last_iter, ":")
         last_iter = self.textbuffer_chat.get_end_iter()
         end_uname_mark = self.textbuffer_chat.create_mark(None, last_iter, True)
-        self.textbuffer_chat.insert(last_iter, text)
+        (convert_successful, conversion_text) = self.unitymu_to_pangomu(text)
+        if convert_successful:
+            self.textbuffer_chat.insert_markup(last_iter, conversion_text, -1)
+        else:
+            self.textbuffer_chat.insert(last_iter, conversion_text, -1)
         last_iter = self.textbuffer_chat.get_end_iter()
         end_mark = self.textbuffer_chat.create_mark(None, last_iter, True)
 
@@ -215,31 +223,98 @@ class MainWindow:
 
         GLib.idle_add(self.scroll_to_bottom)
 
+    def unitymu_to_pangomu(self, text):
+        original_text = text
+        markup_error = False
+
+        # Add a " after all color tags
+        pos = 0
+        while True:
+            if pos >= len(text):
+                break
+            found = text.find("<color=", pos)
+            if found == -1:
+                break
+
+            closing = text.find(">", found)
+            if closing == -1:
+                markup_error = True
+                print("Color markup error @", found)
+                break
+
+            text = text[0:closing] + "\"" + text[closing:]
+            print("f")
+            pos = closing + 1
+        # Add a " after size tags
+        pos = 0
+
+        while True:
+            if pos >= len(text):
+                break
+            found = text.find("<size=", pos)
+            if found == -1:
+                break
+
+            closing = text.find(">", found)
+            if closing == -1:
+                markup_error = True
+                print("Size markup error @", found)
+                break
+
+            text = text[0:closing] + "\"" + text[closing:]
+            print("f")
+            pos = closing + 1
+
+        text = text.replace('<color=#', "<span fgcolor=\"#")
+        text = text.replace('<size=', "<span font=\"")
+        text = text.replace('</color>', '</span>')
+        text = text.replace('</size>', '</span>')
+
+        if markup_error:
+            print("Markup Error: ", original_text)
+            return (False, original_text)
+
+        print("Result", text)
+        return (True, text)
+
     def send_chat_message(self, button):
-        rcon_message = dict()
-        rcon_message['Message'] = self.textentry_chat_message.get_text()
-        rcon_message['UserId'] = 0
-        rcon_message['Username'] = self.textentry_chat_who.get_text()
-        rcon_message['Time'] = time.time()
-        rcon_message['Color'] = self.gtkcolor_to_web(self.buttoncolor_chat)
+        font_color = self.gtkcolor_to_web()
+
+        message_composed = ""
+        if self.button_italic.get_active():
+            message_composed = message_composed + "<i>"
+        if self.scalebutton_text_size.get_value() != 14:
+            message_composed = message_composed + "<size=" + str(int(self.scalebutton_text_size.get_value())) + ">"
+        if font_color != "#FFFFFF":
+            message_composed = message_composed + "<color=" + font_color + ">"
+
+        message_composed = message_composed + self.textentry_chat_message.get_text()
+
+        if font_color != "#FFFFFF":
+            message_composed = message_composed + "</color>"
+        if self.scalebutton_text_size.get_value() != 14:
+            message_composed = message_composed + "</size>"
+        if self.button_italic.get_active():
+            message_composed = message_composed + "</i>"
 
         dicty = dict()
         dicty['Identifier'] = 1
         dicty['Name'] = "WebRcon"
-        dicty['Message'] = "say " + self.textentry_chat_message.get_text() #json.dumps(rcon_message)
+        dicty['Type'] = "Chat"
+        dicty['Message'] = "say " + message_composed
 
         self.pyrcon.send(json.dumps(dicty))
         GLib.idle_add(self.scroll_to_bottom)
         self.textentry_chat_message.set_text('')
 
-    def gtkcolor_to_web(self, widget):
+    def gtkcolor_to_web(self):
         color = self.buttoncolor_chat.get_color().to_floats()
-        string = "#" + '{0:x}'.format((int(255.0*(color[0]))))
-        string = string + '{0:x}'.format((int(255.0*(color[1]))))
-        string = string + '{0:x}'.format((int(255.0*(color[2]))))
+        r = "{:0>2X}".format((round(color[0] * 255)))
+        g = "{:0>2X}".format((round(color[1] * 255)))
+        b = "{:0>2X}".format((round(color[2] * 255)))
+        string = "#" + str(r) + str(g) + str(b)
 
-        print(string)
-        return ""
+        return string
 
 
 
