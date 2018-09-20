@@ -223,7 +223,8 @@ class MainWindow:
             self.first_console_message = False
 
             last_iter = self.textbuffer_console.get_end_iter()
-            self.textbuffer_console.insert(last_iter, repr(dicty['Message'])[1:-1] + "")
+            console_message = repr(dicty['Message'])[1:-1].replace("\\n", "\n").replace("\\r", '').strip()
+            self.textbuffer_console.insert(last_iter, console_message + "")
             last_iter = self.textbuffer_console.get_end_iter()
             end_mark = self.textbuffer_console.create_mark(None, last_iter, True)
             self.last_console_mark = end_mark

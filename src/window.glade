@@ -408,7 +408,7 @@
                           <object class="GtkTextView" id="textview_console">
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
-                            <property name="pixels_above_lines">2</property>
+                            <property name="pixels_above_lines">5</property>
                             <property name="pixels_below_lines">2</property>
                             <property name="editable">False</property>
                             <property name="wrap_mode">word-char</property>
