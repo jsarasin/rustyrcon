@@ -136,7 +136,7 @@ class MainWindow:
         self.send_console_message("global.find .")
 
     def pyrcon_event_rcon_message_received(self, message):
-        dicty = json.loads(message.data)
+        dicty = json.loads(message.data.decode("utf-8"))
         GLib.idle_add(self.safe_wee, dicty)
 
     def process_chat_message(self, message):
