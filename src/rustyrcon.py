@@ -94,6 +94,7 @@ class MainWindow:
         self.textbuffer_console = BetterBuffer()
         self.textbuffer_console.create_tag("e1", paragraph_background="lightgrey", foreground='Black')
         self.textbuffer_console.create_tag("e2", paragraph_background="darkgrey", foreground='White')
+        self.textbuffer_console.create_tag("console_command", paragraph_background="black", foreground='lightgreen', weight=Pango.Weight.BOLD)
         self.textview_console.set_buffer(self.textbuffer_console)
 
 
@@ -144,6 +145,21 @@ class MainWindow:
         pass
 
     def event_button_send_console(self, button):
+        last_iter = self.textbuffer_console.get_end_iter()
+        begin_mark = self.textbuffer_console.create_mark(None, last_iter, True)
+        if not self.first_console_message:
+            last_iter = self.textbuffer_console.get_end_iter()
+            self.textbuffer_console.insert(last_iter, "\n")
+
+        self.first_console_message = False
+
+        last_iter = self.textbuffer_console.get_end_iter()
+        self.textbuffer_console.insert(last_iter, " $ " + self.textentry_console.get_text())
+        last_iter = self.textbuffer_console.get_end_iter()
+        end_mark = self.textbuffer_console.create_mark(None, last_iter, True)
+
+        self.textbuffer_console.apply_tag_to_mark_range("console_command", begin_mark, end_mark)
+
         self.send_console_message(self.textentry_console.get_text())
         self.textentry_console.set_text('')
 
