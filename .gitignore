@@ -7,3 +7,5 @@
 .idea/**/*.iws
 *.iws
 .idea
+*.pyc
+

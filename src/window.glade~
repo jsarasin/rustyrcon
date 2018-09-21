@@ -11,6 +11,7 @@
     <property name="page_size">12</property>
   </object>
   <object class="GtkEntryCompletion" id="entrycompletion_console">
+    <property name="inline_completion">True</property>
     <property name="inline_selection">True</property>
   </object>
   <object class="GtkImage" id="image1">
