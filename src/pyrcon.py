@@ -34,39 +34,29 @@ class PyRCON(WebSocketClient):
             self.event_message_cb(m)
         sys.stdout.flush()
 
-#
-#
-# class DummyClient(WebSocketClient):
-#     def opened(self):
-#         self.send("{'Identifier':1, 'Message':'say hello','Name':'WebRcon'}")
-#         pass
-#
-#     def closed(self, code, reason=None):
-#         print("Closed down", code, reason)
-#
-#     def received_message(self, m):
-#         print(m)
-#         sys.stdout.flush()
-#
-#
-# if __name__ == '__main__':
-#     try:
-#         password = "1404817"
-#         ws = DummyClient('ws://108.61.239.97:28018/' + password, protocols=['http-only', 'chat'])
-#         ws.connect()
-#         ws.run_forever()
-#
-#     except KeyboardInterrupt:
-#         ws.close()
+    def send_chat_message(self, message, text_size=14, font_color="#FFFFFF", italic=False):
+        message_composed = ""
+        if italic:
+            message_composed = message_composed + "<i>"
+        if text_size != 14:
+            message_composed = message_composed + "<size=" + str(int(text_size)) + ">"
+        if font_color != "#FFFFFF":
+            message_composed = message_composed + "<color=" + font_color + ">"
 
-# """
-#   "Message": "{
-#   'Message': 'hello',
-#   'UserId': 0,
-#   'Username': 'SERVER',
-#   'Color': '#eee',
-#   'Time': 1537168254
-# }",
-# """
-# self.send("{'Identifier':1, 'Message':'say hello','Name':'WebRcon'}")
-# # self.send("{'Identifier':1, 'Message':'chat.tail 10','Name':'WebRcon'}")
+        message_composed = message_composed + message
+
+        if font_color != "#FFFFFF":
+            message_composed = message_composed + "</color>"
+        if text_size != 14:
+            message_composed = message_composed + "</size>"
+        if italic:
+            message_composed = message_composed + "</i>"
+
+        dicty = dict()
+        dicty['Identifier'] = 1
+        dicty['Name'] = "WebRcon"
+        dicty['Type'] = "Chat"
+        dicty['Message'] = "say " + message_composed
+
+        self.send(json.dumps(dicty))
+

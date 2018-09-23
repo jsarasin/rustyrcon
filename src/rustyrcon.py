@@ -18,12 +18,19 @@ class BufferManager:
     def __init__(self, buffer):
         self.buffer = buffer
 
+class Autocomplete:
+    def __init__(self):
+        pass
+
+
+
 
 class MainWindow:
     def __init__(self):
-        self.pyrcon = None
         # Program initialization
         self.have_command_and_var_cache = False
+        self.autocomplete = None
+        self.pyrcon = None
 
         # Chat message globals
         self.first_chat_message = True
@@ -61,7 +68,7 @@ class MainWindow:
         self.textentry_server_port = builder.get_object("textentry_server_port")
         self.textentry_password = builder.get_object("textentry_password")
         self.button_connect = builder.get_object("button_connect")
-        self.button_connect.connect("clicked", self.event_button_clicked)
+        self.button_connect.connect("clicked", self.event_connect_clicked)
 
         # Connection Stage 2
         # Connection Stage 3
@@ -113,13 +120,15 @@ class MainWindow:
         self.button_loadout_remove = builder.get_object("button_loadout_remove")
         self.button_loadout_edit = builder.get_object("button_loadout_edit")
 
-    def event_button_clicked(self, button):
+    ####################
+    ## Event handlers ##
+    ####################
+    def event_connect_clicked(self, button):
         self.stack_connection_stage.set_visible_child_name("page1")
         self.pyrcon = PyRCON("ws://" + self.textentry_server_address.get_text() + ':' + self.textentry_server_port.get_text() + '/' + self.textentry_password.get_text(), protocols=['http-only', 'chat'])
         self.pyrcon.event_connected_cb = self.pyrcon_event_connected
         self.pyrcon.event_message_cb = self.pyrcon_event_rcon_message_received
         self.pyrcon.connect()
-        # self.pyrcon.run()
 
     def event_shutdown(self, widget, event):
         if self.pyrcon is not None:
@@ -128,21 +137,7 @@ class MainWindow:
             sys.stdout.flush()
             self.pyrcon.close_connection()
         Gtk.main_quit()
-
         return False
-
-    def pyrcon_event_connected(self):
-        GLib.idle_add(self.stack_connection_stage.set_visible_child_name, "page2")
-        self.send_console_message("global.find .")
-
-    def pyrcon_event_rcon_message_received(self, message):
-        dicty = json.loads(message.data.decode("utf-8"))
-        GLib.idle_add(self.safe_wee, dicty)
-
-    def process_chat_message(self, message):
-        pass
-    def process_console_message(self, message):
-        pass
 
     def event_button_send_console(self, button):
         last_iter = self.textbuffer_console.get_end_iter()
@@ -163,6 +158,12 @@ class MainWindow:
         self.send_console_message(self.textentry_console.get_text())
         self.textentry_console.set_text('')
 
+    def process_chat_message(self, message):
+        pass
+
+    def process_console_message(self, message):
+        pass
+
     def send_console_message(self, message):
         dicty = dict()
         dicty['Identifier'] = 1
@@ -177,7 +178,6 @@ class MainWindow:
         variables = []
         commands = []
         self.have_command_and_var_cache = True
-        # message = message.replace("\\n ", "\n")
 
         command_section_start = message.find("Commands:\n") + 10
 
@@ -215,13 +215,12 @@ class MainWindow:
         for variable in variables:
             self.entrycompletion_liststore.append([variable[0]])
 
-
-
     def safe_wee(self, dicty):
         identifier = dicty['Identifier']
         mtype = dicty['Type']
         stacktrace = dicty['Stacktrace']
-        #assert(stacktrace == '')
+
+        print(dicty)
 
         if self.have_command_and_var_cache == False:
             if 'Message' in dicty:
@@ -253,8 +252,6 @@ class MainWindow:
                 self.last_console_entry_color = 0
 
             self.textview_console.scroll_to_mark(self.last_console_mark, 0.1, True, 0.0, 0.5)
-
-
 
         try:
             # Chat Message
@@ -295,11 +292,7 @@ class MainWindow:
             sys.stdout.flush()
 
     def scroll_chat_to_bottom(self):
-        # start, end = self.textbuffer_chat.get_bounds()
-        #iter = self.textbuffer_chat.get_iter_at_line(self.textbuffer_chat.get_line_count() - 1)
-        # self.textview_chat.scroll_to_iter(end, 0.0, False, 0, 1)
         self.textview_chat.scroll_to_mark(self.last_chat_mark, 0.1, True, 0.0, 0.5)
-
 
     def process_chat_message(self, message):
         text = message['Message']
@@ -313,7 +306,6 @@ class MainWindow:
             self.textbuffer_chat.insert(last_iter, "\n")
 
         self.first_chat_message = False
-
 
         last_iter = self.textbuffer_chat.get_end_iter()
         begin_chat_mark = self.textbuffer_chat.create_mark(None, last_iter, True)
@@ -388,37 +380,18 @@ class MainWindow:
 
         if markup_error:
             print("Markup Error: ", original_text)
-            return (False, original_text)
+            return False, original_text
 
-        return (True, text)
+        return True, text,
 
     def send_chat_message(self, button):
         font_color = self.gtkcolor_to_web()
 
-        message_composed = ""
-        if self.button_italic.get_active():
-            message_composed = message_composed + "<i>"
-        if self.scalebutton_text_size.get_value() != 14:
-            message_composed = message_composed + "<size=" + str(int(self.scalebutton_text_size.get_value())) + ">"
-        if font_color != "#FFFFFF":
-            message_composed = message_composed + "<color=" + font_color + ">"
+        self.pyrcon.send_chat_message(self.textentry_chat_message.get_text(),
+                                      italic = self.button_italic.get_active(),
+                                      text_size=self.scalebutton_text_size.get_value(),
+                                      font_color = font_color)
 
-        message_composed = message_composed + self.textentry_chat_message.get_text()
-
-        if font_color != "#FFFFFF":
-            message_composed = message_composed + "</color>"
-        if self.scalebutton_text_size.get_value() != 14:
-            message_composed = message_composed + "</size>"
-        if self.button_italic.get_active():
-            message_composed = message_composed + "</i>"
-
-        dicty = dict()
-        dicty['Identifier'] = 1
-        dicty['Name'] = "WebRcon"
-        dicty['Type'] = "Chat"
-        dicty['Message'] = "say " + message_composed
-
-        self.pyrcon.send(json.dumps(dicty))
         GLib.idle_add(self.scroll_chat_to_bottom)
         self.textentry_chat_message.set_text('')
 
@@ -431,6 +404,13 @@ class MainWindow:
 
         return string
 
+    def pyrcon_event_connected(self):
+        GLib.idle_add(self.stack_connection_stage.set_visible_child_name, "page2")
+        # self.send_console_message("global.find .")
+
+    def pyrcon_event_rcon_message_received(self, message):
+        dicty = json.loads(message.data.decode("utf-8"))
+        GLib.idle_add(self.safe_wee, dicty)
 
 
 
