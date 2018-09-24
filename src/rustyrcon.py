@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+# sudo -H pip3 install appdirs
 # Cool items:
 # ak
 # ammo.rifle
@@ -7,8 +8,10 @@
 import time
 import json
 import sys
+from os import path, makedirs
 from pyrcon import PyRCON
 from utilities import unity_to_pango, gtkcolor_to_web
+from appdirs import user_data_dir
 
 import gi
 gi.require_version('Gtk', '3.0')
@@ -22,9 +25,6 @@ class BufferManager:
 class Autocomplete:
     def __init__(self):
         pass
-
-
-
 
 class MainWindow:
     def __init__(self):
@@ -48,19 +48,49 @@ class MainWindow:
         # Shared Models
         self.liststore_players = Gtk.ListStore(str)# GObject.GType([str]) #TYPE_PYOBJECT
         self.entrycompletion_liststore = Gtk.ListStore(str,)# GObject.GType([str]) #TYPE_PYOBJECT
+        self.liststore_servers = Gtk.ListStore(str)
 
         # GUI initialization
         self.connect_builder_objects()
         self.window.show_all()
-        self.load_default_connection()
+        self.load_connections()
 
 
 
-    def load_default_connection(self):
-        self.textentry_server_address.set_text("108.61.239.97")
-        self.textentry_server_port.set_text("28018")
-        self.textentry_password.set_text("1404817")
+    def load_connections(self):
+        config_file = path.join(user_data_dir("RustyRCON", "opensource"), "settings.json")
+        server_list = []
+        default_connection = ""
 
+        if path.exists(config_file) == False:
+            initial_config = dict()
+            initial_config['default'] = default_connection
+            initial_config['servers'] = server_list
+
+            makedirs(path.dirname(config_file), exist_ok=True)
+            with open(config_file, "w") as f:
+                json.dump(initial_config, f)
+
+        sample_server = dict()
+        sample_server['address'] = "108.61.239.97"
+        sample_server['port'] = "28018"
+        sample_server['password'] = "1404817"
+        sample_server['name'] = "Chris'"
+
+        server_list.append(sample_server)
+
+        self.populate_server_list(server_list)
+
+    def populate_server_list(self, server_list):
+        self.liststore_servers.clear()
+        for server in server_list:
+            self.liststore_servers.append([server['name']])
+
+        self.combo_servers.set_model(self.liststore_servers)
+
+        # self.textentry_server_address.set_text("108.61.239.97")
+        # self.textentry_server_port.set_text("28018")
+        # self.textentry_password.set_text("1404817")
 
     def connect_builder_objects(self):
         builder = Gtk.Builder()
@@ -80,6 +110,8 @@ class MainWindow:
         self.textentry_password = builder.get_object("textentry_password")
         self.button_connect = builder.get_object("button_connect")
         self.button_connect.connect("clicked", self.event_connect_clicked)
+        self.entry_server_name = builder.get_object('entry_server_name')
+        self.combo_servers = builder.get_object('combo_servers')
 
         # Connection Stage 2
         # Connection Stage 3
