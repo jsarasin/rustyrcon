@@ -28,9 +28,10 @@ class Autocomplete:
 class MainWindow:
     def __init__(self):
         # Program initialization
-        self.have_command_and_var_cache = False
+        self.have_command_and_var_cache = True
         self.autocomplete = None
         self.pyrcon = None
+        self.unique_identifier = 5
 
         # Chat message globals
         self.first_chat_message = True
@@ -127,7 +128,9 @@ class MainWindow:
         self.stack_connection_stage.set_visible_child_name("page1")
         self.pyrcon = PyRCON("ws://" + self.textentry_server_address.get_text() + ':' + self.textentry_server_port.get_text() + '/' + self.textentry_password.get_text(), protocols=['http-only', 'chat'])
         self.pyrcon.event_connected_cb = self.pyrcon_event_connected
-        self.pyrcon.event_message_cb = self.pyrcon_event_rcon_message_received
+        self.pyrcon.event_closed_cb = self.pyrcon_event_closed
+        self.pyrcon.event_chat_cb = self.pyrcon_event_chat_received
+        self.pyrcon.event_console_cb = self.pyrcon_event_console_message_received
         self.pyrcon.connect()
 
     def event_shutdown(self, widget, event):
@@ -158,15 +161,38 @@ class MainWindow:
         self.send_console_message(self.textentry_console.get_text())
         self.textentry_console.set_text('')
 
-    def process_chat_message(self, message):
-        pass
-
     def process_console_message(self, message):
-        pass
+        if message == '':
+            return
 
-    def send_console_message(self, message):
+        last_iter = self.textbuffer_console.get_end_iter()
+        begin_mark = self.textbuffer_console.create_mark(None, last_iter, True)
+        if not self.first_console_message:
+            last_iter = self.textbuffer_console.get_end_iter()
+            self.textbuffer_console.insert(last_iter, "\n")
+
+        self.first_console_message = False
+
+        last_iter = self.textbuffer_console.get_end_iter()
+        console_message = message.replace("\\n", "\n").replace("\\r", '').strip()
+        self.textbuffer_console.insert(last_iter, console_message + "")
+        last_iter = self.textbuffer_console.get_end_iter()
+        end_mark = self.textbuffer_console.create_mark(None, last_iter, True)
+        self.last_console_mark = end_mark
+
+        if self.last_console_entry_color == 0:
+            self.textbuffer_console.apply_tag_to_mark_range("e1", begin_mark, end_mark)
+            self.last_console_entry_color = 1
+        elif self.last_console_entry_color == 1:
+            self.textbuffer_console.apply_tag_to_mark_range("e2", begin_mark, end_mark)
+            self.last_console_entry_color = 0
+
+        self.textview_console.scroll_to_mark(self.last_console_mark, 0.1, True, 0.0, 0.5)
+
+
+    def send_console_message(self, message, identifier=1):
         dicty = dict()
-        dicty['Identifier'] = 1
+        dicty['Identifier'] = identifier
         dicty['Name'] = "WebRcon"
         dicty['Type'] = "Chat"
         dicty['Message'] = message
@@ -174,7 +200,14 @@ class MainWindow:
         self.pyrcon.send(json.dumps(dicty))
         GLib.idle_add(self.textview_console.scroll_to_mark, self.last_console_mark, 0.1, True, 0.0, 0.5)
 
-    def process_initial_cache_message(self, message):
+
+    def build_console_entry_completion(self, commands, variables):
+        for command in commands:
+            self.entrycompletion_liststore.append([command[0]])
+        for variable in variables:
+            self.entrycompletion_liststore.append([variable[0]])
+
+    def pyrcon_cb_global_find(self, message):
         variables = []
         commands = []
         self.have_command_and_var_cache = True
@@ -184,7 +217,7 @@ class MainWindow:
         command_section = message[command_section_start:].split(sep="\n")
         command_section = [item.strip() for item in command_section]
 
-        variables_section = message[11:command_section_start-12].split(sep="\n")
+        variables_section = message[11:command_section_start - 12].split(sep="\n")
         variables_section = [item.strip() for item in variables_section]
 
         for variable in variables_section:
@@ -198,7 +231,7 @@ class MainWindow:
 
             description = variable[variable_name_end + 1:default_value_begin].strip()
             default_value = variable[default_value_begin + 1:default_value_end]
-            variables.append((variable_name, description, default_value, ))
+            variables.append((variable_name, description, default_value,))
 
         for command in command_section:
             if command == '':
@@ -209,98 +242,17 @@ class MainWindow:
 
         self.build_console_entry_completion(commands, variables)
 
-    def build_console_entry_completion(self, commands, variables):
-        for command in commands:
-            self.entrycompletion_liststore.append([command[0]])
-        for variable in variables:
-            self.entrycompletion_liststore.append([variable[0]])
+    def pyrcon_cg_chat_tail(self, message):
+        messages = json.loads(message)
 
-    def safe_wee(self, dicty):
-        identifier = dicty['Identifier']
-        mtype = dicty['Type']
-        stacktrace = dicty['Stacktrace']
-
-        print(dicty)
-
-        if self.have_command_and_var_cache == False:
-            if 'Message' in dicty:
-                if dicty['Message'][0:10] == "Variables:":
-                    self.process_initial_cache_message(dicty['Message'])
-                    return
-
-        if dicty['Message'][0:1] != '{' and dicty['Message'] != '':
-            last_iter = self.textbuffer_console.get_end_iter()
-            begin_mark = self.textbuffer_console.create_mark(None, last_iter, True)
-            if not self.first_console_message:
-                last_iter = self.textbuffer_console.get_end_iter()
-                self.textbuffer_console.insert(last_iter, "\n")
-
-            self.first_console_message = False
-
-            last_iter = self.textbuffer_console.get_end_iter()
-            console_message = repr(dicty['Message'])[1:-1].replace("\\n", "\n").replace("\\r", '').strip()
-            self.textbuffer_console.insert(last_iter, console_message + "")
-            last_iter = self.textbuffer_console.get_end_iter()
-            end_mark = self.textbuffer_console.create_mark(None, last_iter, True)
-            self.last_console_mark = end_mark
-
-            if self.last_console_entry_color == 0:
-                self.textbuffer_console.apply_tag_to_mark_range("e1", begin_mark, end_mark)
-                self.last_console_entry_color = 1
-            elif self.last_console_entry_color == 1:
-                self.textbuffer_console.apply_tag_to_mark_range("e2", begin_mark, end_mark)
-                self.last_console_entry_color = 0
-
-            self.textview_console.scroll_to_mark(self.last_console_mark, 0.1, True, 0.0, 0.5)
-
-        try:
-            # Chat Message
-            if(mtype == 'Chat'):
-                message = json.loads(dicty['Message'])
-                self.process_chat_message(message)
-            elif(mtype == "Log"):
-                pass
-            elif(mtype == "Generic"):
-                # Chat Message Received
-                if 'Message' in dicty:
-                    if dicty['Message'] == '':
-                        return
-                    # For some reason Rust occasionally sends chat messages like this on top of the normal way
-                    if dicty['Message'][0:6] == '[CHAT]':
-                        return
-                    if dicty['Message'][0:5] == 'Saved':
-                        return
-                    if dicty['Message'][0:6] == 'Saving':
-                        return
-
-                    messages = json.loads(dicty['Message'])
-                    for message in messages:
-                        GLib.idle_add(self.process_chat_message, message)
-                        sys.stdout.flush()
-            else:
-                print("Unhandled message type", dicty)
-                sys.stdout.flush()
-        except json.decoder.JSONDecodeError as e:
-            return
-            print(" --- JSON Parse Error ---")
-            print("message type:", mtype)
-            print(" -- dicty --")
-            print(dicty)
-            print(" -- message --")
-            print(e.doc)
-            print(e.msg, "at", e.pos)
-            sys.stdout.flush()
+        for message in messages:
+            self.process_chat_message(message['Username'], message['Time'], message['Message'])
+            # GLib.idle_add(self.process_chat_message, message)
 
     def scroll_chat_to_bottom(self):
         self.textview_chat.scroll_to_mark(self.last_chat_mark, 0.1, True, 0.0, 0.5)
 
-    def process_chat_message(self, message):
-        text = message['Message']
-        color = message['Color']
-        time = message['Time']
-        username = message['Username']
-        userid = message['UserId']
-
+    def process_chat_message(self, username, time, message):
         if self.first_chat_message != True:
             last_iter = self.textbuffer_chat.get_end_iter()
             self.textbuffer_chat.insert(last_iter, "\n")
@@ -314,7 +266,7 @@ class MainWindow:
         self.textbuffer_chat.insert(last_iter, ":")
         last_iter = self.textbuffer_chat.get_end_iter()
         end_uname_mark = self.textbuffer_chat.create_mark(None, last_iter, True)
-        (convert_successful, conversion_text) = self.unitymu_to_pangomu(text)
+        (convert_successful, conversion_text) = self.unitymu_to_pangomu(message)
         if convert_successful:
             self.textbuffer_chat.insert_markup(last_iter, conversion_text, -1)
         else:
@@ -388,9 +340,9 @@ class MainWindow:
         font_color = self.gtkcolor_to_web()
 
         self.pyrcon.send_chat_message(self.textentry_chat_message.get_text(),
-                                      italic = self.button_italic.get_active(),
+                                      italic=self.button_italic.get_active(),
                                       text_size=self.scalebutton_text_size.get_value(),
-                                      font_color = font_color)
+                                      font_color=font_color)
 
         GLib.idle_add(self.scroll_chat_to_bottom)
         self.textentry_chat_message.set_text('')
@@ -404,14 +356,30 @@ class MainWindow:
 
         return string
 
+    def get_identifier(self):
+        self.unique_identifier = self.unique_identifier + 1
+        return self.unique_identifier - 1
+
     def pyrcon_event_connected(self):
         GLib.idle_add(self.stack_connection_stage.set_visible_child_name, "page2")
-        # self.send_console_message("global.find .")
+        self.pyrcon.send_console_callback('global.find .', self.pyrcon_cb_global_find)
+        self.pyrcon.send_console_callback('chat.tail', self.pyrcon_cg_chat_tail)
 
-    def pyrcon_event_rcon_message_received(self, message):
-        dicty = json.loads(message.data.decode("utf-8"))
-        GLib.idle_add(self.safe_wee, dicty)
+    def pyrcon_event_chat_received(self, json_message):
+        message = json.loads(json_message)
 
+        GLib.idle_add(self.process_chat_message, message['Username'], message['Time'], message['Message'])
+
+    def pyrcon_event_console_message_received(self, message):
+        GLib.idle_add(self.process_console_message, message)
+
+
+    def pyrcon_event_chat_message(self, username, mtime, message):
+        GLib.idle_add(self.process_chat_message, username, time, message)
+
+    def pyrcon_event_closed(self, code, reason):
+        self.stack_connection_stage.set_visible_child_name("page0")
+        print("Closed client", code, reason)
 
 
 mw = MainWindow()
