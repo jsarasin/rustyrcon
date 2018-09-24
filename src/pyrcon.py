@@ -54,7 +54,7 @@ class PyRCON(WebSocketClient):
 
         print(" --- Received Message --- ")
         print("Identifier: %s  Type: %s  Stacktrace:[%s]  Message:" % (identifier, mtype, stacktrace))
-        print(dicty['Message'].replace("\n", "\\n").replace("\r", "\\r"))
+        print(dicty['Message'].replace("\n", "\\n").replace("\r", "\\r")[0:100])
         print()
 
         sys.stdout.flush()

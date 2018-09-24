@@ -14,6 +14,10 @@
     <property name="inline_completion">True</property>
     <property name="inline_selection">True</property>
   </object>
+  <object class="GtkEntryCompletion" id="entrycompletion_players">
+    <property name="inline_completion">True</property>
+    <property name="inline_selection">True</property>
+  </object>
   <object class="GtkImage" id="image1">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
@@ -35,7 +39,22 @@
         <property name="title" translatable="yes">Rusty RCON</property>
         <property name="show_close_button">True</property>
         <child>
-          <placeholder/>
+          <object class="GtkRevealer" id="revealer_disconnect">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="transition_type">crossfade</property>
+            <property name="reveal_child">True</property>
+            <child>
+              <object class="GtkButton" id="button_disconnect">
+                <property name="label">gtk-disconnect</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="no_show_all">True</property>
+                <property name="use_stock">True</property>
+                <property name="always_show_image">True</property>
+              </object>
+            </child>
+          </object>
         </child>
       </object>
     </child>
@@ -78,6 +97,7 @@
               <object class="GtkBox">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <property name="spacing">5</property>
                 <child>
                   <object class="GtkEntry" id="textentry_server_address">
                     <property name="visible">True</property>
@@ -91,7 +111,7 @@
                 </child>
                 <child>
                   <object class="GtkComboBoxText">
-                    <property name="width_request">129</property>
+                    <property name="width_request">85</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="active">0</property>
@@ -135,10 +155,14 @@
                 <property name="can_focus">False</property>
                 <child>
                   <object class="GtkButton" id="button_connect">
-                    <property name="label" translatable="yes">Connect</property>
+                    <property name="label">gtk-connect</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
+                    <property name="can_default">True</property>
+                    <property name="has_default">True</property>
                     <property name="receives_default">True</property>
+                    <property name="use_stock">True</property>
+                    <property name="always_show_image">True</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -234,6 +258,7 @@
                         <property name="can_focus">True</property>
                         <property name="hscrollbar_policy">never</property>
                         <property name="vscrollbar_policy">always</property>
+                        <property name="window_placement">bottom-left</property>
                         <property name="shadow_type">in</property>
                         <property name="overlay_scrolling">False</property>
                         <child>
@@ -293,7 +318,7 @@
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="receives_default">False</property>
-                            <property name="rgba">rgb(237,212,0)</property>
+                            <property name="rgba">rgb(255,255,255)</property>
                           </object>
                           <packing>
                             <property name="expand">False</property>
@@ -420,6 +445,7 @@
                             <property name="top_margin">2</property>
                             <property name="bottom_margin">2</property>
                             <property name="cursor_visible">False</property>
+                            <property name="monospace">True</property>
                           </object>
                         </child>
                       </object>
@@ -492,6 +518,7 @@
                     <property name="name">page0</property>
                     <property name="title" translatable="yes">Console</property>
                     <property name="position">1</property>
+                    <property name="needs_attention">True</property>
                   </packing>
                 </child>
                 <child>
@@ -513,6 +540,10 @@
                                 <property name="name">treeview_players</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
+                                <property name="reorderable">True</property>
+                                <property name="rules_hint">True</property>
+                                <property name="search_column">0</property>
+                                <property name="activate_on_single_click">True</property>
                                 <child internal-child="selection">
                                   <object class="GtkTreeSelection"/>
                                 </child>
@@ -532,7 +563,7 @@
                     </child>
                   </object>
                   <packing>
-                    <property name="name">page1</property>
+                    <property name="name">players</property>
                     <property name="title" translatable="yes">Players</property>
                     <property name="position">2</property>
                   </packing>
@@ -567,23 +598,6 @@
                             <property name="can_focus">False</property>
                             <property name="row_spacing">4</property>
                             <property name="column_spacing">9</property>
-                            <child>
-                              <object class="GtkComboBoxText">
-                                <property name="width_request">247</property>
-                                <property name="visible">True</property>
-                                <property name="can_focus">False</property>
-                                <property name="has_entry">True</property>
-                                <child internal-child="entry">
-                                  <object class="GtkEntry" id="textentry_receiving_player">
-                                    <property name="can_focus">True</property>
-                                  </object>
-                                </child>
-                              </object>
-                              <packing>
-                                <property name="left_attach">1</property>
-                                <property name="top_attach">0</property>
-                              </packing>
-                            </child>
                             <child>
                               <object class="GtkBox">
                                 <property name="visible">True</property>
@@ -684,7 +698,7 @@
                               </object>
                               <packing>
                                 <property name="left_attach">1</property>
-                                <property name="top_attach">1</property>
+                                <property name="top_attach">2</property>
                               </packing>
                             </child>
                             <child>
@@ -709,8 +723,28 @@
                               </object>
                               <packing>
                                 <property name="left_attach">0</property>
-                                <property name="top_attach">1</property>
+                                <property name="top_attach">2</property>
                               </packing>
+                            </child>
+                            <child>
+                              <object class="GtkSearchEntry" id="search_loadout_gift_players">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="primary_icon_name">edit-find-symbolic</property>
+                                <property name="primary_icon_activatable">False</property>
+                                <property name="primary_icon_sensitive">False</property>
+                                <property name="completion">entrycompletion_players</property>
+                              </object>
+                              <packing>
+                                <property name="left_attach">1</property>
+                                <property name="top_attach">0</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <placeholder/>
+                            </child>
+                            <child>
+                              <placeholder/>
                             </child>
                           </object>
                           <packing>
@@ -742,7 +776,7 @@
                     </child>
                   </object>
                   <packing>
-                    <property name="name">page3</property>
+                    <property name="name">loadout_gift</property>
                     <property name="title" translatable="yes">Loadout Gift</property>
                     <property name="position">3</property>
                   </packing>

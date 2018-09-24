@@ -8,6 +8,7 @@ import time
 import json
 import sys
 from pyrcon import PyRCON
+from utilities import unity_to_pango, gtkcolor_to_web
 
 import gi
 gi.require_version('Gtk', '3.0')
@@ -28,10 +29,12 @@ class Autocomplete:
 class MainWindow:
     def __init__(self):
         # Program initialization
-        self.have_command_and_var_cache = True
         self.autocomplete = None
         self.pyrcon = None
         self.unique_identifier = 5
+
+        # Program data
+        self.entity_list = None
 
         # Chat message globals
         self.first_chat_message = True
@@ -42,6 +45,9 @@ class MainWindow:
         self.last_console_entry_color = 0
         self.last_console_mark = None
 
+        # Shared Models
+        self.liststore_players = Gtk.ListStore(str)# GObject.GType([str]) #TYPE_PYOBJECT
+        self.entrycompletion_liststore = Gtk.ListStore(str,)# GObject.GType([str]) #TYPE_PYOBJECT
 
         # GUI initialization
         self.connect_builder_objects()
@@ -62,6 +68,10 @@ class MainWindow:
 
         self.window = builder.get_object("window")
         self.window.connect("delete-event", self.event_shutdown)
+        self.stack_rcon = builder.get_object('stack_rcon')
+        self.stack_rcon.connect('notify::visible-child', self.event_stack_rcon_switched)
+        self.button_disconnect = builder.get_object('button_disconnect')
+        self.button_disconnect.connect('clicked', self.event_button_disconnect_clicked)
 
         # Connection Stage 1
         self.stack_connection_stage = builder.get_object("stack_connection_stage")
@@ -108,10 +118,26 @@ class MainWindow:
 
         self.treeview_players = builder.get_object("treeview_players")
         self.entrycompletion_console = builder.get_object("entrycompletion_console")
-        self.entrycompletion_liststore = Gtk.ListStore(str,)# GObject.GType([str]) #TYPE_PYOBJECT
         self.entrycompletion_console.set_model(self.entrycompletion_liststore)
         self.entrycompletion_console.set_text_column(0)
+
         # Players
+        self.treeview_players = builder.get_object('treeview_players')
+        renderer_text = Gtk.CellRendererText()
+        column_text = Gtk.TreeViewColumn("Display Name", renderer_text, text=0)
+        self.treeview_players.append_column(column_text)
+        column_text = Gtk.TreeViewColumn("Steam ID", renderer_text, text=1)
+        self.treeview_players.append_column(column_text)
+        column_text = Gtk.TreeViewColumn("Ping", renderer_text, text=2)
+        self.treeview_players.append_column(column_text)
+        column_text = Gtk.TreeViewColumn("Address", renderer_text, text=3)
+        self.treeview_players.append_column(column_text)
+        column_text = Gtk.TreeViewColumn("Health", renderer_text, text=4)
+        self.treeview_players.append_column(column_text)
+
+        self.treestore_players = Gtk.TreeStore(str, str, int, str, float)
+        self.treeview_players.set_model(self.treestore_players)
+
 
 
         # Loadout Gift
@@ -121,9 +147,30 @@ class MainWindow:
         self.button_loadout_remove = builder.get_object("button_loadout_remove")
         self.button_loadout_edit = builder.get_object("button_loadout_edit")
 
+        self.search_loadout_gift_players = builder.get_object("search_loadout_gift_players")
+        self.entrycompletion_players = builder.get_object("entrycompletion_players")
+        self.entrycompletion_players.set_model(self.liststore_players)
+        self.entrycompletion_players.set_text_column(0)
+
+        self.load_entity_types()
+
+    def load_entity_types(self):
+        fp = open("../rust_entities.json", 'r')
+        self.entity_list = json.load(fp)
+        fp.close()
+
     ####################
     ## Event handlers ##
     ####################
+    def event_button_disconnect_clicked(self, button):
+        self.disconnect()
+
+    def event_stack_rcon_switched(self, event, cat):
+        child_name = self.stack_rcon.get_visible_child_name()
+
+        if child_name == "players" or child_name == "loadout_gift":
+            self.pyrcon.send_console_callback("global.playerlist", self.pyrcon_cb_player_update)
+
     def event_connect_clicked(self, button):
         self.stack_connection_stage.set_visible_child_name("page1")
         self.pyrcon = PyRCON("ws://" + self.textentry_server_address.get_text() + ':' + self.textentry_server_port.get_text() + '/' + self.textentry_password.get_text(), protocols=['http-only', 'chat'])
@@ -131,6 +178,9 @@ class MainWindow:
         self.pyrcon.event_closed_cb = self.pyrcon_event_closed
         self.pyrcon.event_chat_cb = self.pyrcon_event_chat_received
         self.pyrcon.event_console_cb = self.pyrcon_event_console_message_received
+        GLib.idle_add(self.connect)
+
+    def connect(self):
         self.pyrcon.connect()
 
     def event_shutdown(self, widget, event):
@@ -207,10 +257,78 @@ class MainWindow:
         for variable in variables:
             self.entrycompletion_liststore.append([variable[0]])
 
+    def scroll_chat_to_bottom(self):
+        self.textview_chat.scroll_to_mark(self.last_chat_mark, 0.1, True, 0.0, 0.5)
+
+    def process_chat_message(self, username, mtime, message):
+        if self.first_chat_message != True:
+            last_iter = self.textbuffer_chat.get_end_iter()
+            self.textbuffer_chat.insert(last_iter, "\n")
+
+        self.first_chat_message = False
+
+        last_iter = self.textbuffer_chat.get_end_iter()
+        begin_chat_mark = self.textbuffer_chat.create_mark(None, last_iter, True)
+        self.textbuffer_chat.insert(last_iter, "" + username)
+        last_iter = self.textbuffer_chat.get_end_iter()
+        self.textbuffer_chat.insert(last_iter, ":")
+        last_iter = self.textbuffer_chat.get_end_iter()
+        end_uname_mark = self.textbuffer_chat.create_mark(None, last_iter, True)
+        (convert_successful, conversion_text) = unity_to_pango(message)
+        if convert_successful:
+            self.textbuffer_chat.insert_markup(last_iter, conversion_text, -1)
+        else:
+            self.textbuffer_chat.insert(last_iter, conversion_text, -1)
+        last_iter = self.textbuffer_chat.get_end_iter()
+        end_mark = self.textbuffer_chat.create_mark(None, last_iter, True)
+
+        self.last_chat_mark = end_mark
+
+        if username == "SERVER":
+            self.textbuffer_chat.apply_tag_to_mark_range("server_chat", begin_chat_mark, end_mark)
+            self.textbuffer_chat.apply_tag_to_mark_range("server_uname", begin_chat_mark, end_uname_mark)
+        else:
+            self.textbuffer_chat.apply_tag_to_mark_range("peasant_chat", begin_chat_mark, end_mark)
+            self.textbuffer_chat.apply_tag_to_mark_range("peasant_uname", begin_chat_mark, end_uname_mark)
+
+        GLib.idle_add(self.scroll_chat_to_bottom)
+
+
+    def send_chat_message(self, button):
+        font_color = gtkcolor_to_web(self.buttoncolor_chat)
+
+        self.pyrcon.send_chat_message(self.textentry_chat_message.get_text(),
+                                      italic=self.button_italic.get_active(),
+                                      text_size=self.scalebutton_text_size.get_value(),
+                                      font_color=font_color)
+
+        GLib.idle_add(self.scroll_chat_to_bottom)
+        self.textentry_chat_message.set_text('')
+
+    def get_identifier(self):
+        self.unique_identifier = self.unique_identifier + 1
+        return self.unique_identifier - 1
+
+    def disconnect(self):
+        self.stack_connection_stage.set_visible_child_name("page0")
+        self.pyrcon.close()
+        self.button_disconnect.set_visible(False)
+        self.liststore_players.clear()
+        self.entrycompletion_liststore.clear()
+
+
+    ##################################
+    # Callbacks for server responses #
+    ##################################
+    def pyrcon_cg_chat_tail(self, message):
+        messages = json.loads(message)
+
+        for message in messages:
+            self.process_chat_message(message['Username'], message['Time'], message['Message'])
+
     def pyrcon_cb_global_find(self, message):
         variables = []
         commands = []
-        self.have_command_and_var_cache = True
 
         command_section_start = message.find("Commands:\n") + 10
 
@@ -242,128 +360,28 @@ class MainWindow:
 
         self.build_console_entry_completion(commands, variables)
 
-    def pyrcon_cg_chat_tail(self, message):
-        messages = json.loads(message)
+    def pyrcon_cb_player_update(self, message):
+        data = json.loads(message)
+        self.treeview_players.set_model(None)
+        self.treestore_players.clear()
+        self.liststore_players.clear()
 
-        for message in messages:
-            self.process_chat_message(message['Username'], message['Time'], message['Message'])
-            # GLib.idle_add(self.process_chat_message, message)
+        for player in data:
+            display_name = str(player['DisplayName'])
+            steam_id = str(player['SteamID'])
+            ping = int(player['Ping'])
+            address = str(player['Address'].partition(':')[0])
+            health = float(player['Health'])
+            self.treestore_players.append(None, [display_name, steam_id, ping, address, health])
+            self.liststore_players.append([display_name])
 
-    def scroll_chat_to_bottom(self):
-        self.textview_chat.scroll_to_mark(self.last_chat_mark, 0.1, True, 0.0, 0.5)
-
-    def process_chat_message(self, username, time, message):
-        if self.first_chat_message != True:
-            last_iter = self.textbuffer_chat.get_end_iter()
-            self.textbuffer_chat.insert(last_iter, "\n")
-
-        self.first_chat_message = False
-
-        last_iter = self.textbuffer_chat.get_end_iter()
-        begin_chat_mark = self.textbuffer_chat.create_mark(None, last_iter, True)
-        self.textbuffer_chat.insert(last_iter, "" + username)
-        last_iter = self.textbuffer_chat.get_end_iter()
-        self.textbuffer_chat.insert(last_iter, ":")
-        last_iter = self.textbuffer_chat.get_end_iter()
-        end_uname_mark = self.textbuffer_chat.create_mark(None, last_iter, True)
-        (convert_successful, conversion_text) = self.unitymu_to_pangomu(message)
-        if convert_successful:
-            self.textbuffer_chat.insert_markup(last_iter, conversion_text, -1)
-        else:
-            self.textbuffer_chat.insert(last_iter, conversion_text, -1)
-        last_iter = self.textbuffer_chat.get_end_iter()
-        end_mark = self.textbuffer_chat.create_mark(None, last_iter, True)
-
-        self.last_chat_mark = end_mark
-
-        if username == "SERVER":
-            self.textbuffer_chat.apply_tag_to_mark_range("server_chat", begin_chat_mark, end_mark)
-            self.textbuffer_chat.apply_tag_to_mark_range("server_uname", begin_chat_mark, end_uname_mark)
-        else:
-            self.textbuffer_chat.apply_tag_to_mark_range("peasant_chat", begin_chat_mark, end_mark)
-            self.textbuffer_chat.apply_tag_to_mark_range("peasant_uname", begin_chat_mark, end_uname_mark)
-
-        GLib.idle_add(self.scroll_chat_to_bottom)
-
-    def unitymu_to_pangomu(self, text):
-        original_text = text
-        markup_error = False
-
-        # Add a " after all color tags
-        pos = 0
-        while True:
-            if pos >= len(text):
-                break
-            found = text.find("<color=", pos)
-            if found == -1:
-                break
-
-            closing = text.find(">", found)
-            if closing == -1:
-                markup_error = True
-                print("Color markup error @", found)
-                break
-
-            text = text[0:closing] + "\"" + text[closing:]
-            pos = closing + 1
-        # Add a " after size tags
-        pos = 0
-
-        while True:
-            if pos >= len(text):
-                break
-            found = text.find("<size=", pos)
-            if found == -1:
-                break
-
-            closing = text.find(">", found)
-            if closing == -1:
-                markup_error = True
-                print("Size markup error @", found)
-                break
-
-            text = text[0:closing] + "\"" + text[closing:]
-            pos = closing + 1
-
-        text = text.replace('<color=#', "<span fgcolor=\"#")
-        text = text.replace('<size=', "<span font=\"")
-        text = text.replace('</color>', '</span>')
-        text = text.replace('</size>', '</span>')
-
-        if markup_error:
-            print("Markup Error: ", original_text)
-            return False, original_text
-
-        return True, text,
-
-    def send_chat_message(self, button):
-        font_color = self.gtkcolor_to_web()
-
-        self.pyrcon.send_chat_message(self.textentry_chat_message.get_text(),
-                                      italic=self.button_italic.get_active(),
-                                      text_size=self.scalebutton_text_size.get_value(),
-                                      font_color=font_color)
-
-        GLib.idle_add(self.scroll_chat_to_bottom)
-        self.textentry_chat_message.set_text('')
-
-    def gtkcolor_to_web(self):
-        color = self.buttoncolor_chat.get_color().to_floats()
-        r = "{:0>2X}".format((round(color[0] * 255)))
-        g = "{:0>2X}".format((round(color[1] * 255)))
-        b = "{:0>2X}".format((round(color[2] * 255)))
-        string = "#" + str(r) + str(g) + str(b)
-
-        return string
-
-    def get_identifier(self):
-        self.unique_identifier = self.unique_identifier + 1
-        return self.unique_identifier - 1
+        self.treeview_players.set_model(self.treestore_players)
 
     def pyrcon_event_connected(self):
         GLib.idle_add(self.stack_connection_stage.set_visible_child_name, "page2")
         self.pyrcon.send_console_callback('global.find .', self.pyrcon_cb_global_find)
         self.pyrcon.send_console_callback('chat.tail', self.pyrcon_cg_chat_tail)
+        self.button_disconnect.set_visible(True)
 
     def pyrcon_event_chat_received(self, json_message):
         message = json.loads(json_message)
@@ -385,3 +403,5 @@ class MainWindow:
 mw = MainWindow()
 Gtk.main()
 
+# realm entity group parent name                              position                  local                     rotation              local                 status invokes
+# sv    286882 8380  0      wolf                              (-429.0, 42.5, -272.8)    (-429.0, 42.5, -272.8)    (0.0, 350.7, 0.0)     (0.0, 350.7, 0.0)            TickAi, NetworkPositionTick
