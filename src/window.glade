@@ -64,7 +64,7 @@
         <property name="can_focus">False</property>
         <property name="transition_type">slide-left</property>
         <child>
-          <object class="GtkStack">
+          <object class="GtkStack" id="stack_connect">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <child>
@@ -129,7 +129,7 @@
                         <property name="spacing">5</property>
                         <property name="homogeneous">True</property>
                         <child>
-                          <object class="GtkButton">
+                          <object class="GtkButton" id="button_new_connection">
                             <property name="label">gtk-new</property>
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
@@ -144,7 +144,7 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkButton">
+                          <object class="GtkButton" id="button_edit_connection">
                             <property name="label">gtk-edit</property>
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
@@ -159,7 +159,7 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkButton">
+                          <object class="GtkButton" id="button_delete_connection">
                             <property name="label">gtk-delete</property>
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
@@ -226,29 +226,31 @@
                     <property name="can_focus">False</property>
                     <property name="spacing">5</property>
                     <child>
-                      <object class="GtkEntry" id="textentry_server_address">
+                      <object class="GtkEntry" id="entry_server_address">
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
+                        <property name="width_chars">34</property>
                       </object>
                       <packing>
-                        <property name="expand">False</property>
+                        <property name="expand">True</property>
                         <property name="fill">True</property>
                         <property name="position">0</property>
                       </packing>
                     </child>
                     <child>
                       <object class="GtkComboBoxText">
-                        <property name="width_request">85</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
+                        <property name="hexpand">False</property>
                         <property name="active">0</property>
                         <property name="has_entry">True</property>
                         <items>
                           <item translatable="yes">20807</item>
                         </items>
                         <child internal-child="entry">
-                          <object class="GtkEntry">
+                          <object class="GtkEntry" id="entry_port">
                             <property name="can_focus">True</property>
+                            <property name="width_chars">7</property>
                             <property name="truncate_multiline">True</property>
                             <property name="caps_lock_warning">False</property>
                           </object>
@@ -267,9 +269,11 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkEntry" id="textentry_password">
+                  <object class="GtkEntry" id="entry_password">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
+                    <property name="truncate_multiline">True</property>
+                    <property name="input_purpose">password</property>
                   </object>
                   <packing>
                     <property name="left_attach">1</property>
@@ -292,6 +296,7 @@
                   <object class="GtkEntry" id="entry_server_name">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
+                    <property name="placeholder_text" translatable="yes">A descriptive name for this server</property>
                   </object>
                   <packing>
                     <property name="left_attach">1</property>
@@ -299,22 +304,48 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkButton">
-                    <property name="label">gtk-save</property>
+                  <object class="GtkBox">
                     <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="receives_default">True</property>
+                    <property name="can_focus">False</property>
                     <property name="halign">end</property>
-                    <property name="use_stock">True</property>
-                    <property name="always_show_image">True</property>
+                    <property name="spacing">5</property>
+                    <child>
+                      <object class="GtkButton" id="button_discard_connection">
+                        <property name="label">gtk-discard</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">True</property>
+                        <property name="halign">end</property>
+                        <property name="use_stock">True</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="button_save_connection">
+                        <property name="label">gtk-save</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">True</property>
+                        <property name="halign">end</property>
+                        <property name="use_stock">True</property>
+                        <property name="always_show_image">True</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
                   </object>
                   <packing>
-                    <property name="left_attach">1</property>
+                    <property name="left_attach">0</property>
                     <property name="top_attach">3</property>
+                    <property name="width">2</property>
                   </packing>
-                </child>
-                <child>
-                  <placeholder/>
                 </child>
               </object>
               <packing>

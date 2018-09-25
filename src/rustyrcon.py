@@ -32,6 +32,9 @@ class MainWindow:
         self.autocomplete = None
         self.pyrcon = None
         self.unique_identifier = 5
+        self.server_list = []
+        self.default_connection = ""
+        self.editing_connection = None
 
         # Program data
         self.entity_list = None
@@ -53,37 +56,22 @@ class MainWindow:
         # GUI initialization
         self.connect_builder_objects()
         self.window.show_all()
-        self.load_connections()
+
+        self.setup_connection_dialog()
 
 
+        # sample_server = dict()
+        # sample_server['address'] = "108.61.239.97"
+        # sample_server['port'] = "28018"
+        # sample_server['password'] = "1404817"
+        # sample_server['name'] = "Chris'"
+        # server_list.append(sample_server)
+        # self.populate_server_list(server_list)
 
-    def load_connections(self):
-        config_file = path.join(user_data_dir("RustyRCON", "opensource"), "settings.json")
-        server_list = []
-        default_connection = ""
 
-        if path.exists(config_file) == False:
-            initial_config = dict()
-            initial_config['default'] = default_connection
-            initial_config['servers'] = server_list
-
-            makedirs(path.dirname(config_file), exist_ok=True)
-            with open(config_file, "w") as f:
-                json.dump(initial_config, f)
-
-        sample_server = dict()
-        sample_server['address'] = "108.61.239.97"
-        sample_server['port'] = "28018"
-        sample_server['password'] = "1404817"
-        sample_server['name'] = "Chris'"
-
-        server_list.append(sample_server)
-
-        self.populate_server_list(server_list)
-
-    def populate_server_list(self, server_list):
+    def populate_server_list(self):
         self.liststore_servers.clear()
-        for server in server_list:
+        for server in self.server_list:
             self.liststore_servers.append([server['name']])
 
         self.combo_servers.set_model(self.liststore_servers)
@@ -105,13 +93,30 @@ class MainWindow:
 
         # Connection Stage 1
         self.stack_connection_stage = builder.get_object("stack_connection_stage")
-        self.textentry_server_address = builder.get_object("textentry_server_address")
-        self.textentry_server_port = builder.get_object("textentry_server_port")
-        self.textentry_password = builder.get_object("textentry_password")
+
+        # Connection View
         self.button_connect = builder.get_object("button_connect")
         self.button_connect.connect("clicked", self.event_connect_clicked)
-        self.entry_server_name = builder.get_object('entry_server_name')
         self.combo_servers = builder.get_object('combo_servers')
+        self.combo_servers.connect('changed', self.event_combo_servers_changed)
+
+        self.button_new_connection = builder.get_object('button_new_connection')
+        self.button_new_connection.connect("clicked", self.event_button_new_clicked)
+        self.button_edit_connection = builder.get_object('button_edit_connection')
+        self.button_edit_connection.connect("clicked", self.event_button_edit_clicked)
+        self.button_delete_connection = builder.get_object('button_delete_connection')
+        self.button_delete_connection.connect("clicked", self.event_button_delete_clicked)
+
+        # Connection Editor
+        self.stack_connect = builder.get_object('stack_connect')
+        self.entry_server_name = builder.get_object('entry_server_name')
+        self.entry_server_address = builder.get_object('entry_server_address')
+        self.entry_port = builder.get_object('entry_port')
+        self.entry_password = builder.get_object('entry_password')
+        self.button_save_connection = builder.get_object('button_save_connection')
+        self.button_save_connection.connect('clicked', self.event_button_save_connection_clicked)
+        self.button_discard_connection = builder.get_object('button_discard_connection')
+        self.button_discard_connection.connect('clicked', self.event_button_discard_connection)
 
         # Connection Stage 2
         # Connection Stage 3
@@ -186,6 +191,160 @@ class MainWindow:
 
         self.load_entity_types()
 
+    def load_config_file(self):
+        config_file = path.join(user_data_dir("RustyRCON", "opensource"), "settings.json")
+
+        with open(config_file, "r") as f:
+            initial_config = json.load(f)
+
+        self.default_connection = initial_config['default']
+        self.server_list = initial_config['servers']
+
+        print("Initial default:", self.default_connection)
+        print("servers:", self.server_list)
+
+
+    def write_config_file(self):
+        config_file = path.join(user_data_dir("RustyRCON", "opensource"), "settings.json")
+
+        config = dict()
+        config['default'] = self.default_connection
+        config['servers'] = self.server_list
+
+        with open(config_file, "w") as f:
+            json.dump(config, f)
+
+    def setup_connection_dialog(self):
+        config_file = path.join(user_data_dir("RustyRCON", "opensource"), "settings.json")
+        print("config", config_file)
+
+        if path.exists(config_file) == False:
+            initial_config = dict()
+            initial_config['default'] = ''
+            initial_config['servers'] = []
+
+            makedirs(path.dirname(config_file), exist_ok=True)
+            with open(config_file, "w") as f:
+                json.dump(initial_config, f)
+
+            print("Created emtpy file")
+
+        self.load_config_file()
+        self.populate_server_list()
+
+        self.select_combo_connection(self.default_connection)
+
+
+
+        if self.server_list == []:
+            self.button_discard_connection.set_visible(False)
+            self.editing_connection = None
+            self.stack_connect.set_visible_child_name('page_edit')
+            return
+    def select_combo_connection(self, connection_name):
+        for index, server in enumerate(self.server_list):
+            if server['name'] == connection_name:
+                self.combo_servers.set_active(index)
+                break
+
+
+    def event_combo_servers_changed(self, combo):
+        selected = combo.get_active_text()
+        self.default_connection = selected
+        self.write_config_file()
+
+    def event_button_discard_connection(self, button):
+        self.stack_connect.set_visible_child_name('page_connect')
+        self.editing_connection = ""
+
+    def event_button_new_clicked(self, button):
+        self.entry_server_name.set_text('')
+        self.entry_server_address.set_text('')
+        self.entry_port.set_text('')
+        self.entry_password.set_text('')
+        self.editing_connection = ""
+        self.stack_connect.set_visible_child_name('page_edit')
+
+    def event_button_edit_clicked(self, button):
+        server = self.get_selected_connection()
+
+        self.entry_server_name.set_text(server['name'])
+        self.entry_server_address.set_text(server['address'])
+        self.entry_port.set_text(server['port'])
+        self.entry_password.set_text(server['password'])
+
+        self.editing_connection = server['name']
+        self.stack_connect.set_visible_child_name('page_edit')
+
+    def event_button_delete_clicked(self, button):
+        pass
+
+    def connection_edit_form_to_struct(self):
+        struct = dict()
+        struct['address'] = self.entry_server_address.get_text()
+        struct['port'] = self.entry_port.get_text()
+        struct['name'] = self.entry_server_name.get_text()
+        struct['password'] = self.entry_password.get_text()
+
+        return struct
+
+    def event_button_save_connection_clicked(self, button):
+        if self.entry_server_name.get_text() == '':
+            prompt = Gtk.Dialog()
+            prompt.set_transient_for(self.window)
+            prompt.add_button("Okay", 0)
+            prompt.set_default_response(0)
+            prompt.get_content_area().add(Gtk.Label("Your server must have a name."))
+            prompt.show_all()
+            result = prompt.run()
+            prompt.close()
+            return
+
+        # Check if these settings conflict with another server
+        for index, server in enumerate(self.server_list):
+            if self.entry_server_name.get_text().lower() == server['name'].lower():
+                if self.editing_connection.lower() != server['name'].lower():
+                    prompt = Gtk.Dialog()
+                    prompt.set_transient_for(self.window)
+                    prompt.add_button("Replace Existing", 0)
+                    prompt.add_button("Rename Current", 1)
+                    prompt.set_default_response(1)
+                    prompt.get_content_area().add(Gtk.Label("A connection with this name already exists, would you like to:"))
+                    prompt.show_all()
+                    result = prompt.run()
+                    prompt.close()
+
+                    if result != 0:
+                        self.entry_server_address.grab_focus()
+                        return
+
+                self.server_list[index] = self.connection_edit_form_to_struct()
+                self.write_config_file()
+                self.populate_server_list()
+                self.stack_connect.set_visible_child_name('page_connect')
+                self.button_discard_connection.show(True)
+                return
+
+        # New connection entry
+        self.server_list.append(self.connection_edit_form_to_struct())
+        self.write_config_file()
+        self.populate_server_list()
+        self.stack_connect.set_visible_child_name('page_connect')
+        self.button_discard_connection.set_visible(True)
+        self.select_combo_connection(self.entry_server_name.get_text())
+
+
+    def get_selected_connection(self):
+        text = self.combo_servers.get_active_text()
+
+        for index, server in enumerate(self.server_list):
+            if text == server['name']:
+                return self.server_list[index]
+
+        return None
+
+
+
     def load_entity_types(self):
         fp = open("../rust_entities.json", 'r')
         self.entity_list = json.load(fp)
@@ -204,8 +363,20 @@ class MainWindow:
             self.pyrcon.send_console_callback("global.playerlist", self.pyrcon_cb_player_update)
 
     def event_connect_clicked(self, button):
+        server = self.get_selected_connection()
+        if server == None:
+            prompt = Gtk.Dialog()
+            prompt.set_transient_for(self.window)
+            prompt.get_content_area().add(Gtk.Label("You must select a connection"))
+            prompt.add_button("Okay", 0)
+            prompt.show_all()
+            prompt.run()
+            prompt.close()
+            return
+
+
         self.stack_connection_stage.set_visible_child_name("page1")
-        self.pyrcon = PyRCON("ws://" + self.textentry_server_address.get_text() + ':' + self.textentry_server_port.get_text() + '/' + self.textentry_password.get_text(), protocols=['http-only', 'chat'])
+        self.pyrcon = PyRCON("ws://" + server['address'] + ':' + server['port'] + '/' + server['password'], protocols=['http-only', 'chat'])
         self.pyrcon.event_connected_cb = self.pyrcon_event_connected
         self.pyrcon.event_closed_cb = self.pyrcon_event_closed
         self.pyrcon.event_chat_cb = self.pyrcon_event_chat_received
@@ -429,7 +600,13 @@ class MainWindow:
 
     def pyrcon_event_closed(self, code, reason):
         self.stack_connection_stage.set_visible_child_name("page0")
-        print("Closed client", code, reason)
+        start = self.textbuffer_chat.get_start_iter()
+        end = self.textbuffer_chat.get_end_iter()
+        self.textbuffer_chat.delete(start, end)
+
+        start = self.textbuffer_console.get_start_iter()
+        end = self.textbuffer_console.get_end_iter()
+        self.textbuffer_console.delete(start, end)
 
 
 mw = MainWindow()
