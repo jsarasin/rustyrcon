@@ -158,6 +158,12 @@ class MainWindow:
         self.entrycompletion_console.set_model(self.entrycompletion_liststore)
         self.entrycompletion_console.set_text_column(0)
 
+        self.button_console_view_settings = builder.get_object('button_console_view_settings')
+        self.button_console_view_settings.connect('clicked', self.event_button_console_view_settings)
+        self.button_console_clear = builder.get_object('button_console_clear')
+        self.button_console_clear.connect('clicked', self.event_button_console_clear_clicked)
+        self.popover_console_visible = builder.get_object('popover_console_visible')
+
         # Players
         self.treeview_players = builder.get_object('treeview_players')
         renderer_text = Gtk.CellRendererText()
@@ -247,6 +253,13 @@ class MainWindow:
                 self.combo_servers.set_active(index)
                 break
 
+    def event_button_console_clear_clicked(self, button):
+        start = self.textbuffer_console.get_start_iter()
+        end = self.textbuffer_console.get_end_iter()
+        self.textbuffer_console.delete(start, end)
+
+    def event_button_console_view_settings(self, button):
+        self.popover_console_visible.popup()
 
     def event_combo_servers_changed(self, combo):
         selected = combo.get_active_text()
@@ -526,7 +539,7 @@ class MainWindow:
     def pyrcon_cb_console_tail(self, message):
         messages = json.loads(message)
         for message in messages:
-            self.process_console_message(message['Message'], message['Time'])
+            self.process_console_message(message['Message'].rstrip(), message['Time'])
 
 
 
