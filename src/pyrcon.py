@@ -51,11 +51,11 @@ class PyRCON(WebSocketClient):
         identifier = dicty['Identifier']
         mtype = dicty['Type']
         stacktrace = dicty['Stacktrace']
-
-        print(" --- Received Message --- ")
-        print("Identifier: %s  Type: %s  Stacktrace:[%s]  Message:" % (identifier, mtype, stacktrace))
-        print(dicty['Message'].replace("\n", "\\n").replace("\r", "\\r")[0:100])
-        print()
+        #
+        # print(" --- Received Message --- ")
+        # print("Identifier: %s  Type: %s  Stacktrace:[%s]  Message:" % (identifier, mtype, stacktrace))
+        # print(dicty['Message'].replace("\n", "\\n").replace("\r", "\\r")[0:100])
+        # print()
 
         sys.stdout.flush()
 
@@ -76,7 +76,11 @@ class PyRCON(WebSocketClient):
 
         if mtype == "Generic":
             if self.event_console_cb != None:
-                self.event_console_cb(dicty['Message'])
+                if 'Time' in dicty:
+                    mtime = dicty['Time']
+                else:
+                    mtime = None
+                self.event_console_cb(dicty['Message'], mtime)
                 return
 
 

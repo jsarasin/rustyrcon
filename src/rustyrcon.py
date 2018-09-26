@@ -414,7 +414,7 @@ class MainWindow:
         self.send_console_message(self.textentry_console.get_text())
         self.textentry_console.set_text('')
 
-    def process_console_message(self, message):
+    def process_console_message(self, message, time):
         if message == '':
             return
 
@@ -523,6 +523,13 @@ class MainWindow:
     ##################################
     # Callbacks for server responses #
     ##################################
+    def pyrcon_cb_console_tail(self, message):
+        messages = json.loads(message)
+        for message in messages:
+            self.process_console_message(message['Message'], message['Time'])
+
+
+
     def pyrcon_cg_chat_tail(self, message):
         messages = json.loads(message)
 
@@ -584,6 +591,7 @@ class MainWindow:
         GLib.idle_add(self.stack_connection_stage.set_visible_child_name, "page2")
         self.pyrcon.send_console_callback('global.find .', self.pyrcon_cb_global_find)
         self.pyrcon.send_console_callback('chat.tail', self.pyrcon_cg_chat_tail)
+        self.pyrcon.send_console_callback('console.tail', self.pyrcon_cb_console_tail)
         self.button_disconnect.set_visible(True)
 
     def pyrcon_event_chat_received(self, json_message):
@@ -591,8 +599,8 @@ class MainWindow:
 
         GLib.idle_add(self.process_chat_message, message['Username'], message['Time'], message['Message'])
 
-    def pyrcon_event_console_message_received(self, message):
-        GLib.idle_add(self.process_console_message, message)
+    def pyrcon_event_console_message_received(self, message, time):
+        GLib.idle_add(self.process_console_message, message, time)
 
 
     def pyrcon_event_chat_message(self, username, mtime, message):
