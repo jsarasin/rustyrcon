@@ -6,6 +6,7 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import GLib
 
+from ws4py.exc import HandshakeError
 from ws4py.client.threadedclient import WebSocketClient
 import json
 import sys

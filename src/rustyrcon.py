@@ -1,9 +1,21 @@
 #!/usr/bin/python3
 
 # sudo -H pip3 install appdirs
-# Cool items:
-# ak
-# ammo.rifle
+
+#
+# (rustyrcon.py:7098): Gtk-WARNING **: 00:50:46.359: Invalid text buffer iterator: either the iterator is uninitialized, or the characters/pixbufs/widgets in the buffer have been modified since the iterator was created.
+# You must use marks, character numbers, or line numbers to preserve a position across buffer modifications.
+# You can apply tags and insert marks without invalidating your iterators,
+# but any mutation that affects 'indexable' buffer contents (contents that can be referred to by character offset)
+# will invalidate all outstanding iterators
+#
+# (rustyrcon.py:7098): Gtk-WARNING **: 00:50:46.359: Invalid text buffer iterator: either the iterator is uninitialized, or the characters/pixbufs/widgets in the buffer have been modified since the iterator was created.
+# You must use marks, character numbers, or line numbers to preserve a position across buffer modifications.
+# You can apply tags and insert marks without invalidating your iterators,
+# but any mutation that affects 'indexable' buffer contents (contents that can be referred to by character offset)
+# will invalidate all outstanding iterators
+
+
 
 import time
 import json
@@ -17,6 +29,9 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GdkPixbuf, GObject, GLib, Gdk, cairo, Gio, Pango, GObject
 from betterbuffer import BetterBuffer
+
+from ws4py.exc import HandshakeError
+
 
 class BufferManager:
     def __init__(self, buffer):
@@ -59,26 +74,12 @@ class MainWindow:
 
         self.setup_connection_dialog()
 
-
-        # sample_server = dict()
-        # sample_server['address'] = "108.61.239.97"
-        # sample_server['port'] = "28018"
-        # sample_server['password'] = "1404817"
-        # sample_server['name'] = "Chris'"
-        # server_list.append(sample_server)
-        # self.populate_server_list(server_list)
-
-
     def populate_server_list(self):
         self.liststore_servers.clear()
         for server in self.server_list:
             self.liststore_servers.append([server['name']])
 
         self.combo_servers.set_model(self.liststore_servers)
-
-        # self.textentry_server_address.set_text("108.61.239.97")
-        # self.textentry_server_port.set_text("28018")
-        # self.textentry_password.set_text("1404817")
 
     def connect_builder_objects(self):
         builder = Gtk.Builder()
@@ -261,14 +262,14 @@ class MainWindow:
     def event_button_console_view_settings(self, button):
         self.popover_console_visible.popup()
 
+    def event_button_discard_connection(self, button):
+        self.stack_connect.set_visible_child_name('page_connect')
+        self.editing_connection = ""
+
     def event_combo_servers_changed(self, combo):
         selected = combo.get_active_text()
         self.default_connection = selected
         self.write_config_file()
-
-    def event_button_discard_connection(self, button):
-        self.stack_connect.set_visible_child_name('page_connect')
-        self.editing_connection = ""
 
     def event_button_new_clicked(self, button):
         self.entry_server_name.set_text('')
@@ -290,18 +291,29 @@ class MainWindow:
         self.stack_connect.set_visible_child_name('page_edit')
 
     def event_button_delete_clicked(self, button):
-        pass
+        # Delete the item
+        selected = self.get_selected_connection()
+        to_sel_index = self.combo_servers.get_active() - 1
+        if to_sel_index < 0:
+            to_sel_index = 0
 
-    def connection_edit_form_to_struct(self):
-        struct = dict()
-        struct['address'] = self.entry_server_address.get_text()
-        struct['port'] = self.entry_port.get_text()
-        struct['name'] = self.entry_server_name.get_text()
-        struct['password'] = self.entry_password.get_text()
+        self.server_list.remove(selected)
+        self.write_config_file()
+        self.populate_server_list()
 
-        return struct
+        # Ensure selection or switch to the new connection stack
+        if len(self.combo_servers.get_model()) == 0:
+            self.event_button_new_clicked(button)
+            self.button_discard_connection.hide()
+            self.default_connection = ''
+        else:
+            self.combo_servers.set_active_iter(self.combo_servers.get_model()[to_sel_index].iter)
+            self.default_connection = self.combo_servers.get_active()
+
 
     def event_button_save_connection_clicked(self, button):
+        combo_selected_index = self.combo_servers.get_active()
+
         if self.entry_server_name.get_text() == '':
             prompt = Gtk.Dialog()
             prompt.set_transient_for(self.window)
@@ -334,34 +346,31 @@ class MainWindow:
                 self.server_list[index] = self.connection_edit_form_to_struct()
                 self.write_config_file()
                 self.populate_server_list()
+                self.combo_servers.set_active(combo_selected_index)
                 self.stack_connect.set_visible_child_name('page_connect')
-                self.button_discard_connection.show(True)
+                self.button_discard_connection.show()
                 return
 
         # New connection entry
         self.server_list.append(self.connection_edit_form_to_struct())
         self.write_config_file()
         self.populate_server_list()
+
+        # Select the last item which will be what we just added
+        first = self.combo_servers.get_model().get_iter_first()
+        last = first
+        while True:
+            next = self.combo_servers.get_model().iter_next(last)
+            if next != None:
+                last = next
+                continue
+            else:
+                break
+        self.combo_servers.set_active_iter(last)
+
         self.stack_connect.set_visible_child_name('page_connect')
         self.button_discard_connection.set_visible(True)
         self.select_combo_connection(self.entry_server_name.get_text())
-
-
-    def get_selected_connection(self):
-        text = self.combo_servers.get_active_text()
-
-        for index, server in enumerate(self.server_list):
-            if text == server['name']:
-                return self.server_list[index]
-
-        return None
-
-
-
-    def load_entity_types(self):
-        fp = open("../rust_entities.json", 'r')
-        self.entity_list = json.load(fp)
-        fp.close()
 
     ####################
     ## Event handlers ##
@@ -397,7 +406,14 @@ class MainWindow:
         GLib.idle_add(self.connect)
 
     def connect(self):
-        self.pyrcon.connect()
+        try:
+            self.pyrcon.connect()
+        except HandshakeError:
+            print("Failed to connect")
+            del self.pyrcon
+            self.pyrcon = None
+            self.stack_connection_stage.set_visible_child_name('page0')
+
 
     def event_shutdown(self, widget, event):
         if self.pyrcon is not None:
@@ -427,7 +443,35 @@ class MainWindow:
         self.send_console_message(self.textentry_console.get_text())
         self.textentry_console.set_text('')
 
-    def process_console_message(self, message, time):
+    def connection_edit_form_to_struct(self):
+        struct = dict()
+        struct['address'] = self.entry_server_address.get_text()
+        struct['port'] = self.entry_port.get_text()
+        struct['name'] = self.entry_server_name.get_text()
+        struct['password'] = self.entry_password.get_text()
+
+        return struct
+
+    def get_selected_connection(self):
+        text = self.combo_servers.get_active_text()
+
+        for index, server in enumerate(self.server_list):
+            if text == server['name']:
+                return self.server_list[index]
+
+        return None
+
+    def set_selected_connection(self):
+        treemodel = self.combo_servers.get_model()
+
+
+
+    def load_entity_types(self):
+        fp = open("../rust_entities.json", 'r')
+        self.entity_list = json.load(fp)
+        fp.close()
+
+    def add_console_message_to_buffer(self, message, time):
         if message == '':
             return
 
@@ -539,11 +583,11 @@ class MainWindow:
     def pyrcon_cb_console_tail(self, message):
         messages = json.loads(message)
         for message in messages:
-            self.process_console_message(message['Message'].rstrip(), message['Time'])
+            self.add_console_message_to_buffer(message['Message'].rstrip(), message['Time'])
 
 
 
-    def pyrcon_cg_chat_tail(self, message):
+    def pyrcon_cb_chat_tail(self, message):
         messages = json.loads(message)
 
         for message in messages:
@@ -603,7 +647,7 @@ class MainWindow:
     def pyrcon_event_connected(self):
         GLib.idle_add(self.stack_connection_stage.set_visible_child_name, "page2")
         self.pyrcon.send_console_callback('global.find .', self.pyrcon_cb_global_find)
-        self.pyrcon.send_console_callback('chat.tail', self.pyrcon_cg_chat_tail)
+        self.pyrcon.send_console_callback('chat.tail', self.pyrcon_cb_chat_tail)
         self.pyrcon.send_console_callback('console.tail', self.pyrcon_cb_console_tail)
         self.button_disconnect.set_visible(True)
 
@@ -613,7 +657,7 @@ class MainWindow:
         GLib.idle_add(self.process_chat_message, message['Username'], message['Time'], message['Message'])
 
     def pyrcon_event_console_message_received(self, message, time):
-        GLib.idle_add(self.process_console_message, message, time)
+        GLib.idle_add(self.add_console_message_to_buffer, message, time)
 
 
     def pyrcon_event_chat_message(self, username, mtime, message):
@@ -632,6 +676,3 @@ class MainWindow:
 
 mw = MainWindow()
 Gtk.main()
-
-# realm entity group parent name                              position                  local                     rotation              local                 status invokes
-# sv    286882 8380  0      wolf                              (-429.0, 42.5, -272.8)    (-429.0, 42.5, -272.8)    (0.0, 350.7, 0.0)     (0.0, 350.7, 0.0)            TickAi, NetworkPositionTick
