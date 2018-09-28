@@ -81,6 +81,10 @@ class PyRCON(WebSocketClient):
                     mtime = dicty['Time']
                 else:
                     mtime = None
+
+                # Not sure if this is ever the case
+                assert(mtime == None)
+
                 self.event_console_cb(dicty['Message'], mtime)
                 return
 

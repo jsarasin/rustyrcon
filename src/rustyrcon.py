@@ -15,9 +15,14 @@
 # but any mutation that affects 'indexable' buffer contents (contents that can be referred to by character offset)
 # will invalidate all outstanding iterators
 
+# (rustyrcon.py:4773): Gtk-ERROR **: 19:33:14.339: Unknown segment type: \xc0\\xa9\u0001
+
 
 
 import time
+from datetime import datetime
+from datetime import timedelta
+
 import json
 import sys
 from os import path, makedirs
@@ -28,9 +33,10 @@ from appdirs import user_data_dir
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GdkPixbuf, GObject, GLib, Gdk, cairo, Gio, Pango, GObject
-from betterbuffer import BetterBuffer
+from betterbuffer import BetterBuffer, scroll_to_textview_bottom
 
 from ws4py.exc import HandshakeError
+from rust import RustMessageType, get_console_message_info
 
 
 class BufferManager:
@@ -151,6 +157,15 @@ class MainWindow:
         self.textbuffer_console.create_tag("e1", paragraph_background="lightgrey", foreground='Black')
         self.textbuffer_console.create_tag("e2", paragraph_background="darkgrey", foreground='White')
         self.textbuffer_console.create_tag("console_command", paragraph_background="black", foreground='lightgreen', weight=Pango.Weight.BOLD)
+        self.textbuffer_console.create_tag("time", foreground="darkgrey", style=Pango.Style.ITALIC, scale=0.75)
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.SAVE), invisible=False, invisible_set=True)
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.CONNECT), invisible=False, invisible_set=True)
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.DISCONNECT_GAME), invisible=False, invisible_set=True)
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.LOAD_BEGIN), invisible=False, invisible_set=True)
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.MANIFEST_UPDATE), invisible=False, invisible_set=True)
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.CHAT), invisible=False, invisible_set=True)
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.ENTER_GAME), invisible=False, invisible_set=True)
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.KILLED_BY_PLAYER), invisible=False, invisible_set=True)
         self.textview_console.set_buffer(self.textbuffer_console)
 
 
@@ -164,6 +179,19 @@ class MainWindow:
         self.button_console_clear = builder.get_object('button_console_clear')
         self.button_console_clear.connect('clicked', self.event_button_console_clear_clicked)
         self.popover_console_visible = builder.get_object('popover_console_visible')
+
+        self.check_visible_save = builder.get_object('check_visible_save')
+        self.check_visible_save.connect('toggled', self.event_check_visible_toggled)
+        self.check_visible_connect = builder.get_object('check_visible_connect')
+        self.check_visible_connect.connect('toggled', self.event_check_visible_toggled)
+        self.check_visible_disconnect = builder.get_object('check_visible_disconnect')
+        self.check_visible_disconnect.connect('toggled', self.event_check_visible_toggled)
+        self.check_visible_load_begin = builder.get_object('check_visible_load_begin')
+        self.check_visible_load_begin.connect('toggled', self.event_check_visible_toggled)
+        self.check_visible_manifest = builder.get_object('check_visible_manifest')
+        self.check_visible_manifest.connect('toggled', self.event_check_visible_toggled)
+        self.check_visible_chat = builder.get_object('check_visible_chat')
+        self.check_visible_chat.connect('toggled', self.event_check_visible_toggled)
 
         # Players
         self.treeview_players = builder.get_object('treeview_players')
@@ -253,6 +281,31 @@ class MainWindow:
             if server['name'] == connection_name:
                 self.combo_servers.set_active(index)
                 break
+
+    def event_check_visible_toggled(self, check):
+        if check is self.check_visible_save:
+            tag = self.textbuffer_console.get_tag_table().lookup('mtype' + str(RustMessageType.SAVE))
+        if check is self.check_visible_chat:
+            tag = self.textbuffer_console.get_tag_table().lookup('mtype' + str(RustMessageType.CHAT))
+        if check is self.check_visible_connect:
+            tag = self.textbuffer_console.get_tag_table().lookup('mtype' + str(RustMessageType.CONNECT))
+        if check is self.check_visible_disconnect:
+            tag = self.textbuffer_console.get_tag_table().lookup('mtype' + str(RustMessageType.DISCONNECT_GAME))
+        # if check is self.check_visible_:
+        #     tag = self.textbuffer_console.get_tag_table().lookup('mtype' + str(RustMessageType.ENTER_GAME))
+        # if check is self.check_visible_chat:
+        #     tag = self.textbuffer_console.get_tag_table().lookup('mtype' + str(RustMessageType.KILLED_BY_ENTITY))
+        # if check is self.check_visible_chat:
+        #     tag = self.textbuffer_console.get_tag_table().lookup('mtype' + str(RustMessageType.KILLED_BY_PLAYER))
+        if check is self.check_visible_load_begin:
+            tag = self.textbuffer_console.get_tag_table().lookup('mtype' + str(RustMessageType.LOAD_BEGIN))
+        if check is self.check_visible_manifest:
+            tag = self.textbuffer_console.get_tag_table().lookup('mtype' + str(RustMessageType.MANIFEST_UPDATE))
+        # if check is self.check_visible_chat:
+        #     tag = self.textbuffer_console.get_tag_table().lookup('mtype' + str(RustMessageType.SUICIDE))
+
+
+        tag.props.invisible = not check.get_active()
 
     def event_button_console_clear_clicked(self, button):
         start = self.textbuffer_console.get_start_iter()
@@ -471,33 +524,90 @@ class MainWindow:
         self.entity_list = json.load(fp)
         fp.close()
 
-    def add_console_message_to_buffer(self, message, time):
+    def get_normal_date(self, dt):
+        return dt.strftime('%b %d').strip()
+
+    def get_normal_time(self, dt):
+        return '{d:%l}:{d.minute:02}:{d.second:02} {d:%p}'.format(d=dt).strip()
+
+    def get_message_time_string(self, dt):
+        now = datetime.now()
+        mtime_dt = datetime.fromtimestamp(dt)
+        # This doesn't take into account timezones, but roughly if the message is
+        # more than a few hours old we should put it all
+        if now - mtime_dt > timedelta(hours=6):
+            time_string = self.get_normal_date(mtime_dt) + ' ' + self.get_normal_time(mtime_dt)
+        else:
+            time_string = self.get_normal_time(mtime_dt)
+
+        return time_string
+
+    def add_console_message_to_buffer(self, message, mtime):
         if message == '':
             return
 
+
+        if self.last_console_mark is not None:
+            # The buffer isnt empty so this is the first line to put in the buffer
+            # therefore we need a newline character to begin with but it needs to be part
+            # of the last message so we can hide the newline if we're hiding that message
+            # time as well
+            insert_nl_at = self.textbuffer_console.get_iter_at_mark(self.last_console_mark)
+            insert_nl_at.backward_char()
+            tags = insert_nl_at.get_tags()
+            for tag in tags:
+                print(tag.props.name)
+
+            print()
+            # insert_nl_at = self.textbuffer_console.get_iter_at_mark(self.last_console_mark)
+            insert_nl_at = self.textbuffer_console.get_end_iter()
+            self.textbuffer_console.insert_with_tags(insert_nl_at, "\n", *tags)
+            self.textbuffer_console.delete_mark(self.last_console_mark)
+
         last_iter = self.textbuffer_console.get_end_iter()
         begin_mark = self.textbuffer_console.create_mark(None, last_iter, True)
-        if not self.first_console_message:
-            last_iter = self.textbuffer_console.get_end_iter()
-            self.textbuffer_console.insert(last_iter, "\n")
 
-        self.first_console_message = False
+        console_message = message.replace("\\n", "\n").replace("\\r", '').strip()
 
         last_iter = self.textbuffer_console.get_end_iter()
-        console_message = message.replace("\\n", "\n").replace("\\r", '').strip()
-        self.textbuffer_console.insert(last_iter, console_message + "")
+        self.textbuffer_console.insert(last_iter, console_message)
+        last_iter = self.textbuffer_console.get_end_iter()
+        self.last_console_mark = self.textbuffer_console.create_mark(None, last_iter, True)
         last_iter = self.textbuffer_console.get_end_iter()
         end_mark = self.textbuffer_console.create_mark(None, last_iter, True)
-        self.last_console_mark = end_mark
 
-        if self.last_console_entry_color == 0:
-            self.textbuffer_console.apply_tag_to_mark_range("e1", begin_mark, end_mark)
-            self.last_console_entry_color = 1
-        elif self.last_console_entry_color == 1:
-            self.textbuffer_console.apply_tag_to_mark_range("e2", begin_mark, end_mark)
-            self.last_console_entry_color = 0
+        self.textbuffer_console.apply_tag_to_mark_range("e1", begin_mark, end_mark)
+        message_type = get_console_message_info(message)
+        if message_type is not None:
+            self.textbuffer_console.apply_tag_to_mark_range("mtype" + str(message_type), begin_mark, end_mark)
 
-        self.textview_console.scroll_to_mark(self.last_console_mark, 0.1, True, 0.0, 0.5)
+        GLib.idle_add(scroll_to_textview_bottom, self.textview_console)
+
+        self.textbuffer_console.delete_mark(begin_mark)
+        self.textbuffer_console.delete_mark(end_mark)
+
+        # begin_mark = self.textbuffer_console.create_mark(None, last_iter, True)
+        # if not self.first_console_message:
+        #     last_iter = self.textbuffer_console.get_end_iter()
+        #     self.textbuffer_console.insert(last_iter, "\n")
+        #
+        # self.first_console_message = False
+        #
+        # last_iter = self.textbuffer_console.get_end_iter()
+        # console_message = message.replace("\\n", "\n").replace("\\r", '').strip()
+        # self.textbuffer_console.insert(last_iter, console_message + "")
+        # last_iter = self.textbuffer_console.get_end_iter()
+        # end_mark = self.textbuffer_console.create_mark(None, last_iter, True)
+        # self.last_console_mark = end_mark
+        #
+        # if self.last_console_entry_color == 0:
+        #     self.textbuffer_console.apply_tag_to_mark_range("e1", begin_mark, end_mark)
+        #     self.last_console_entry_color = 1
+        # elif self.last_console_entry_color == 1:
+        #     self.textbuffer_console.apply_tag_to_mark_range("e2", begin_mark, end_mark)
+        #     self.last_console_entry_color = 0
+        #
+        # self.textview_console.scroll_to_mark(self.last_console_mark, 0.1, True, 0.0, 0.5)
 
 
     def send_console_message(self, message, identifier=1):
@@ -508,7 +618,8 @@ class MainWindow:
         dicty['Message'] = message
 
         self.pyrcon.send(json.dumps(dicty))
-        GLib.idle_add(self.textview_console.scroll_to_mark, self.last_console_mark, 0.1, True, 0.0, 0.5)
+        scroll_to_textview_bottom(self.textview_console)
+        # GLib.idle_add(self.textview_console.scroll_to_mark, self.last_console_mark, 0.1, True, 0.0, 0.5)
 
 
     def build_console_entry_completion(self, commands, variables):
@@ -517,10 +628,8 @@ class MainWindow:
         for variable in variables:
             self.entrycompletion_liststore.append([variable[0]])
 
-    def scroll_chat_to_bottom(self):
-        self.textview_chat.scroll_to_mark(self.last_chat_mark, 0.1, True, 0.0, 0.5)
-
     def process_chat_message(self, username, mtime, message):
+        return
         if self.first_chat_message != True:
             last_iter = self.textbuffer_chat.get_end_iter()
             self.textbuffer_chat.insert(last_iter, "\n")
@@ -551,8 +660,7 @@ class MainWindow:
             self.textbuffer_chat.apply_tag_to_mark_range("peasant_chat", begin_chat_mark, end_mark)
             self.textbuffer_chat.apply_tag_to_mark_range("peasant_uname", begin_chat_mark, end_uname_mark)
 
-        GLib.idle_add(self.scroll_chat_to_bottom)
-
+        scroll_to_textview_bottom(self.textview_chat)
 
     def send_chat_message(self, button):
         font_color = gtkcolor_to_web(self.buttoncolor_chat)
@@ -562,7 +670,7 @@ class MainWindow:
                                       text_size=self.scalebutton_text_size.get_value(),
                                       font_color=font_color)
 
-        GLib.idle_add(self.scroll_chat_to_bottom)
+        scroll_to_textview_bottom(self.textview_chat)
         self.textentry_chat_message.set_text('')
 
     def get_identifier(self):

@@ -3,6 +3,16 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GdkPixbuf, GObject, GLib, Gdk, cairo, Gio
 
+
+def scroll_to_textview_bottom(tv):
+    model = tv.get_buffer()
+    end_iter = model.get_end_iter();
+    end_mark = model.create_mark(None, end_iter, False)
+
+    tv.scroll_to_mark(end_mark, 0.1, True, 0.0, 1.0)
+    model.delete_mark(end_mark)
+
+
 class BetterBuffer(Gtk.TextBuffer):
     """
     This is another layer ontop of Gtk.TextBuffer which helps to deal with fancy text.
@@ -50,14 +60,14 @@ class BetterBuffer(Gtk.TextBuffer):
 
         self.apply_tag_by_name(tag_name, mark1, mark2)
 
-    def create_mark(self, name, itera, left_gravity=True):
-        if name in self.mark_name_list and name != None:
-            raise ValueError("You already created a mark with this name!")
-
-        offset = itera.get_offset()
-
-        new_mark = Gtk.TextBuffer.create_mark(self, name, itera, left_gravity)
-        # new_mark.set_visible(True)
-
-        self.mark_name_list.append(name)
-        return new_mark
+    # def create_mark(self, name, itera, left_gravity=True):
+    #     if name in self.mark_name_list and name != None:
+    #         raise ValueError("You already created a mark with this name!")
+    #
+    #     offset = itera.get_offset()
+    #
+    #     new_mark = Gtk.TextBuffer.create_mark(self, name, itera, left_gravity)
+    #     # new_mark.set_visible(True)
+    #
+    #     self.mark_name_list.append(name)
+    #     return new_mark
