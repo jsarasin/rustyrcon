@@ -66,7 +66,7 @@ class MainWindow:
 
         # Console globals
         self.first_console_message = True
-        self.last_console_entry_color = 0
+        self.last_console_entry_color = 'e1'
         self.last_console_mark = None
 
         # Shared Models
@@ -97,13 +97,14 @@ class MainWindow:
         self.stack_rcon.connect('notify::visible-child', self.event_stack_rcon_switched)
         self.button_disconnect = builder.get_object('button_disconnect')
         self.button_disconnect.connect('clicked', self.event_button_disconnect_clicked)
+        self.revealer_disconnect = builder.get_object('revealer_disconnect')
 
         # Connection Stage 1
         self.stack_connection_stage = builder.get_object("stack_connection_stage")
 
         # Connection View
         self.button_connect = builder.get_object("button_connect")
-        self.button_connect.connect("clicked", self.event_connect_clicked)
+        self.button_connect.connect("clicked", self.event_button_connect_clicked)
         self.combo_servers = builder.get_object('combo_servers')
         self.combo_servers.connect('changed', self.event_combo_servers_changed)
 
@@ -158,6 +159,7 @@ class MainWindow:
         self.textbuffer_console.create_tag("e2", paragraph_background="darkgrey", foreground='White')
         self.textbuffer_console.create_tag("console_command", paragraph_background="black", foreground='lightgreen', weight=Pango.Weight.BOLD)
         self.textbuffer_console.create_tag("time", foreground="darkgrey", style=Pango.Style.ITALIC, scale=0.75)
+        self.textbuffer_console.create_tag("cat", paragraph_background="red", foreground='white', style=Pango.Style.ITALIC, scale=0.75)
         self.textbuffer_console.create_tag('mtype' + str(RustMessageType.SAVE), invisible=False, invisible_set=True)
         self.textbuffer_console.create_tag('mtype' + str(RustMessageType.CONNECT), invisible=False, invisible_set=True)
         self.textbuffer_console.create_tag('mtype' + str(RustMessageType.DISCONNECT_GAME), invisible=False, invisible_set=True)
@@ -166,6 +168,7 @@ class MainWindow:
         self.textbuffer_console.create_tag('mtype' + str(RustMessageType.CHAT), invisible=False, invisible_set=True)
         self.textbuffer_console.create_tag('mtype' + str(RustMessageType.ENTER_GAME), invisible=False, invisible_set=True)
         self.textbuffer_console.create_tag('mtype' + str(RustMessageType.KILLED_BY_PLAYER), invisible=False, invisible_set=True)
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.KILLED_BY_ENTITY), invisible=False, invisible_set=True)
         self.textview_console.set_buffer(self.textbuffer_console)
 
 
@@ -272,7 +275,7 @@ class MainWindow:
 
 
         if self.server_list == []:
-            self.button_discard_connection.set_visible(False)
+            self.revealer_disconnect.set_reveal_child(False)
             self.editing_connection = None
             self.stack_connect.set_visible_child_name('page_edit')
             return
@@ -305,12 +308,18 @@ class MainWindow:
         #     tag = self.textbuffer_console.get_tag_table().lookup('mtype' + str(RustMessageType.SUICIDE))
 
 
-        tag.props.invisible = not check.get_active()
+        if check.get_active():
+            pass
+            # tag.props.size = 0.0
+        else:
+            tag.props.size_set = True
+            tag.props.size_points = 0.0
+
+            pass
+            # tag.props.size = 1024.0
 
     def event_button_console_clear_clicked(self, button):
-        start = self.textbuffer_console.get_start_iter()
-        end = self.textbuffer_console.get_end_iter()
-        self.textbuffer_console.delete(start, end)
+        self.reset_interface()
 
     def event_button_console_view_settings(self, button):
         self.popover_console_visible.popup()
@@ -344,6 +353,23 @@ class MainWindow:
         self.stack_connect.set_visible_child_name('page_edit')
 
     def event_button_delete_clicked(self, button):
+        dialog = Gtk.Dialog()
+        dialog.set_transient_for(self.window)
+        dialog.add_button("Delete", 0)
+        dialog.add_button("Cancel", 1)
+        dialog.set_default_response(1)
+        dialog.get_content_area().add(Gtk.Label("Are you sure you want to delete this?"))
+        dialog.show_all()
+        result = dialog.run()
+        if result == 1:
+            dialog.close()
+            del(dialog)
+            return
+
+        dialog.close()
+        del(dialog)
+
+
         # Delete the item
         selected = self.get_selected_connection()
         to_sel_index = self.combo_servers.get_active() - 1
@@ -437,7 +463,7 @@ class MainWindow:
         if child_name == "players" or child_name == "loadout_gift":
             self.pyrcon.send_console_callback("global.playerlist", self.pyrcon_cb_player_update)
 
-    def event_connect_clicked(self, button):
+    def event_button_connect_clicked(self, button):
         server = self.get_selected_connection()
         if server == None:
             prompt = Gtk.Dialog()
@@ -449,6 +475,7 @@ class MainWindow:
             prompt.close()
             return
 
+        self.reset_interface()
 
         self.stack_connection_stage.set_visible_child_name("page1")
         self.pyrcon = PyRCON("ws://" + server['address'] + ':' + server['port'] + '/' + server['password'], protocols=['http-only', 'chat'])
@@ -457,6 +484,13 @@ class MainWindow:
         self.pyrcon.event_chat_cb = self.pyrcon_event_chat_received
         self.pyrcon.event_console_cb = self.pyrcon_event_console_message_received
         GLib.idle_add(self.connect)
+
+    def reset_interface(self):
+        start = self.textbuffer_console.get_start_iter()
+        end = self.textbuffer_console.get_end_iter()
+        self.textbuffer_console.delete(start, end)
+        self.liststore_players.clear()
+        self.entrycompletion_liststore.clear()
 
     def connect(self):
         try:
@@ -478,20 +512,15 @@ class MainWindow:
         return False
 
     def event_button_send_console(self, button):
-        last_iter = self.textbuffer_console.get_end_iter()
-        begin_mark = self.textbuffer_console.create_mark(None, last_iter, True)
-        if not self.first_console_message:
-            last_iter = self.textbuffer_console.get_end_iter()
-            self.textbuffer_console.insert(last_iter, "\n")
+        console_command = ''
+        if self.textbuffer_console.get_char_count() > 0:
+            console_command = "\n"
 
-        self.first_console_message = False
+        console_command = console_command + " $ " + self.textentry_console.get_text()
+        tags = [self.textbuffer_console.get_tag("console_command")]
 
         last_iter = self.textbuffer_console.get_end_iter()
-        self.textbuffer_console.insert(last_iter, " $ " + self.textentry_console.get_text())
-        last_iter = self.textbuffer_console.get_end_iter()
-        end_mark = self.textbuffer_console.create_mark(None, last_iter, True)
-
-        self.textbuffer_console.apply_tag_to_mark_range("console_command", begin_mark, end_mark)
+        self.textbuffer_console.insert_with_tags(last_iter, console_command, *tags)
 
         self.send_console_message(self.textentry_console.get_text())
         self.textentry_console.set_text('')
@@ -546,95 +575,34 @@ class MainWindow:
         if message == '':
             return
 
+        if self.textbuffer_console.get_char_count() == 0:
+            first_item = True
+        else:
+            first_item = False
 
-        if self.last_console_mark is not None:
-            # The buffer isnt empty so this is the first line to put in the buffer
-            # therefore we need a newline character to begin with but it needs to be part
-            # of the last message so we can hide the newline if we're hiding that message
-            # time as well
-            insert_nl_at = self.textbuffer_console.get_iter_at_mark(self.last_console_mark)
-            insert_nl_at.backward_char()
-            tags = insert_nl_at.get_tags()
-            for tag in tags:
-                print(tag.props.name)
-
-            print()
-            # insert_nl_at = self.textbuffer_console.get_iter_at_mark(self.last_console_mark)
-            insert_nl_at = self.textbuffer_console.get_end_iter()
-            self.textbuffer_console.insert_with_tags(insert_nl_at, "\n", *tags)
-            self.textbuffer_console.delete_mark(self.last_console_mark)
-
-        last_iter = self.textbuffer_console.get_end_iter()
-        begin_mark = self.textbuffer_console.create_mark(None, last_iter, True)
-
-        console_message = message.replace("\\n", "\n").replace("\\r", '').strip()
-
-        last_iter = self.textbuffer_console.get_end_iter()
-        self.textbuffer_console.insert(last_iter, console_message)
-        last_iter = self.textbuffer_console.get_end_iter()
-        self.last_console_mark = self.textbuffer_console.create_mark(None, last_iter, True)
-        last_iter = self.textbuffer_console.get_end_iter()
-        end_mark = self.textbuffer_console.create_mark(None, last_iter, True)
-
-        self.textbuffer_console.apply_tag_to_mark_range("e1", begin_mark, end_mark)
+        tags = []
         message_type = get_console_message_info(message)
         if message_type is not None:
-            self.textbuffer_console.apply_tag_to_mark_range("mtype" + str(message_type), begin_mark, end_mark)
+            tags.append(self.textbuffer_console.get_tag_table().lookup("mtype" + str(message_type)))
+
+        if first_item:
+            console_message = ''
+        else:
+            console_message = "\n"
+
+        console_message = console_message + message.replace("\\n", "\n").replace("\\r", '').strip()
+
+        last_iter = self.textbuffer_console.get_end_iter()
+        self.textbuffer_console.insert_with_tags(last_iter, console_message, *tags)
 
         GLib.idle_add(scroll_to_textview_bottom, self.textview_console)
 
-        self.textbuffer_console.delete_mark(begin_mark)
-        self.textbuffer_console.delete_mark(end_mark)
-
-        # begin_mark = self.textbuffer_console.create_mark(None, last_iter, True)
-        # if not self.first_console_message:
-        #     last_iter = self.textbuffer_console.get_end_iter()
-        #     self.textbuffer_console.insert(last_iter, "\n")
-        #
-        # self.first_console_message = False
-        #
-        # last_iter = self.textbuffer_console.get_end_iter()
-        # console_message = message.replace("\\n", "\n").replace("\\r", '').strip()
-        # self.textbuffer_console.insert(last_iter, console_message + "")
-        # last_iter = self.textbuffer_console.get_end_iter()
-        # end_mark = self.textbuffer_console.create_mark(None, last_iter, True)
-        # self.last_console_mark = end_mark
-        #
-        # if self.last_console_entry_color == 0:
-        #     self.textbuffer_console.apply_tag_to_mark_range("e1", begin_mark, end_mark)
-        #     self.last_console_entry_color = 1
-        # elif self.last_console_entry_color == 1:
-        #     self.textbuffer_console.apply_tag_to_mark_range("e2", begin_mark, end_mark)
-        #     self.last_console_entry_color = 0
-        #
-        # self.textview_console.scroll_to_mark(self.last_console_mark, 0.1, True, 0.0, 0.5)
 
 
-    def send_console_message(self, message, identifier=1):
-        dicty = dict()
-        dicty['Identifier'] = identifier
-        dicty['Name'] = "WebRcon"
-        dicty['Type'] = "Chat"
-        dicty['Message'] = message
-
-        self.pyrcon.send(json.dumps(dicty))
-        scroll_to_textview_bottom(self.textview_console)
-        # GLib.idle_add(self.textview_console.scroll_to_mark, self.last_console_mark, 0.1, True, 0.0, 0.5)
-
-
-    def build_console_entry_completion(self, commands, variables):
-        for command in commands:
-            self.entrycompletion_liststore.append([command[0]])
-        for variable in variables:
-            self.entrycompletion_liststore.append([variable[0]])
-
-    def process_chat_message(self, username, mtime, message):
-        return
-        if self.first_chat_message != True:
+    def add_chat_message_to_buffer(self, username, mtime, message):
+        if self.textbuffer_chat.get_char_count() > 0:
             last_iter = self.textbuffer_chat.get_end_iter()
             self.textbuffer_chat.insert(last_iter, "\n")
-
-        self.first_chat_message = False
 
         last_iter = self.textbuffer_chat.get_end_iter()
         begin_chat_mark = self.textbuffer_chat.create_mark(None, last_iter, True)
@@ -660,7 +628,21 @@ class MainWindow:
             self.textbuffer_chat.apply_tag_to_mark_range("peasant_chat", begin_chat_mark, end_mark)
             self.textbuffer_chat.apply_tag_to_mark_range("peasant_uname", begin_chat_mark, end_uname_mark)
 
+        self.textbuffer_chat.delete_mark(begin_chat_mark)
+        self.textbuffer_chat.delete_mark(end_uname_mark)
+        self.textbuffer_chat.delete_mark(end_mark)
+
         scroll_to_textview_bottom(self.textview_chat)
+
+    def send_console_message(self, message, identifier=1):
+        dicty = dict()
+        dicty['Identifier'] = identifier
+        dicty['Name'] = "WebRcon"
+        dicty['Type'] = "Chat"
+        dicty['Message'] = message
+
+        self.pyrcon.send(json.dumps(dicty))
+        scroll_to_textview_bottom(self.textview_console)
 
     def send_chat_message(self, button):
         font_color = gtkcolor_to_web(self.buttoncolor_chat)
@@ -673,6 +655,12 @@ class MainWindow:
         scroll_to_textview_bottom(self.textview_chat)
         self.textentry_chat_message.set_text('')
 
+    def build_console_entry_completion(self, commands, variables):
+        for command in commands:
+            self.entrycompletion_liststore.append([command[0]])
+        for variable in variables:
+            self.entrycompletion_liststore.append([variable[0]])
+
     def get_identifier(self):
         self.unique_identifier = self.unique_identifier + 1
         return self.unique_identifier - 1
@@ -680,10 +668,7 @@ class MainWindow:
     def disconnect(self):
         self.stack_connection_stage.set_visible_child_name("page0")
         self.pyrcon.close()
-        self.button_disconnect.set_visible(False)
-        self.liststore_players.clear()
-        self.entrycompletion_liststore.clear()
-
+        self.revealer_disconnect.set_reveal_child(False)
 
     ##################################
     # Callbacks for server responses #
@@ -699,7 +684,7 @@ class MainWindow:
         messages = json.loads(message)
 
         for message in messages:
-            self.process_chat_message(message['Username'], message['Time'], message['Message'])
+            self.add_chat_message_to_buffer(message['Username'], message['Time'], message['Message'])
 
     def pyrcon_cb_global_find(self, message):
         variables = []
@@ -757,29 +742,25 @@ class MainWindow:
         self.pyrcon.send_console_callback('global.find .', self.pyrcon_cb_global_find)
         self.pyrcon.send_console_callback('chat.tail', self.pyrcon_cb_chat_tail)
         self.pyrcon.send_console_callback('console.tail', self.pyrcon_cb_console_tail)
-        self.button_disconnect.set_visible(True)
+        self.revealer_disconnect.set_reveal_child(True)
 
     def pyrcon_event_chat_received(self, json_message):
         message = json.loads(json_message)
 
-        GLib.idle_add(self.process_chat_message, message['Username'], message['Time'], message['Message'])
+        GLib.idle_add(self.add_chat_message_to_buffer, message['Username'], message['Time'], message['Message'])
 
     def pyrcon_event_console_message_received(self, message, time):
         GLib.idle_add(self.add_console_message_to_buffer, message, time)
 
 
     def pyrcon_event_chat_message(self, username, mtime, message):
-        GLib.idle_add(self.process_chat_message, username, time, message)
+        GLib.idle_add(self.add_chat_message_to_buffer, username, time, message)
 
     def pyrcon_event_closed(self, code, reason):
         self.stack_connection_stage.set_visible_child_name("page0")
         start = self.textbuffer_chat.get_start_iter()
         end = self.textbuffer_chat.get_end_iter()
         self.textbuffer_chat.delete(start, end)
-
-        start = self.textbuffer_console.get_start_iter()
-        end = self.textbuffer_console.get_end_iter()
-        self.textbuffer_console.delete(start, end)
 
 
 mw = MainWindow()

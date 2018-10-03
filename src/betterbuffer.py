@@ -6,7 +6,7 @@ from gi.repository import Gtk, GdkPixbuf, GObject, GLib, Gdk, cairo, Gio
 
 def scroll_to_textview_bottom(tv):
     model = tv.get_buffer()
-    end_iter = model.get_end_iter();
+    end_iter = model.get_iter_at_line(model.get_line_count()-1);
     end_mark = model.create_mark(None, end_iter, False)
 
     tv.scroll_to_mark(end_mark, 0.1, True, 0.0, 1.0)
@@ -51,6 +51,8 @@ class BetterBuffer(Gtk.TextBuffer):
         #                 wrap_mode=Gtk.WrapMode.WORD_CHAR,
         #                 right_margin=0)
         # self.create_tag("highlight", background="orange");
+    def get_tag(self, tag):
+        return self.get_tag_table().lookup(tag)
 
     def apply_tag_to_mark_range(self, tag_name, start_mark, end_mark):
         if (not isinstance(start_mark, Gtk.TextMark) or not isinstance(end_mark, Gtk.TextMark)):

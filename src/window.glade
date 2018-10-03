@@ -34,8 +34,8 @@
     <property name="stock">gtk-find</property>
   </object>
   <object class="GtkWindow" id="window">
-    <property name="width_request">820</property>
-    <property name="height_request">558</property>
+    <property name="width_request">977</property>
+    <property name="height_request">663</property>
     <property name="can_focus">False</property>
     <child type="titlebar">
       <object class="GtkHeaderBar">
@@ -48,13 +48,12 @@
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="transition_type">crossfade</property>
-            <property name="reveal_child">True</property>
             <child>
               <object class="GtkButton" id="button_disconnect">
                 <property name="label">gtk-disconnect</property>
+                <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="no_show_all">True</property>
                 <property name="use_stock">True</property>
                 <property name="always_show_image">True</property>
               </object>
@@ -412,7 +411,7 @@
             <child>
               <object class="GtkStackSidebar">
                 <property name="visible">True</property>
-                <property name="can_focus">False</property>
+                <property name="can_focus">True</property>
                 <property name="stack">stack_rcon</property>
               </object>
               <packing>
@@ -631,10 +630,10 @@
                         <child>
                           <object class="GtkButton" id="button_console_view_settings">
                             <property name="label" translatable="yes">View</property>
-                            <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="focus_on_click">False</property>
                             <property name="receives_default">True</property>
+                            <property name="no_show_all">True</property>
                             <property name="image">image3</property>
                             <property name="always_show_image">True</property>
                           </object>
@@ -743,7 +742,6 @@
                     <property name="name">page0</property>
                     <property name="title" translatable="yes">Console</property>
                     <property name="position">1</property>
-                    <property name="needs_attention">True</property>
                   </packing>
                 </child>
                 <child>
@@ -1022,6 +1020,12 @@
         </child>
       </object>
     </child>
+  </object>
+  <object class="GtkSizeGroup">
+    <property name="ignore_hidden">True</property>
+    <widgets>
+      <widget name="stack_rcon"/>
+    </widgets>
   </object>
   <object class="GtkPopover" id="popover_console_visible">
     <property name="can_focus">False</property>
