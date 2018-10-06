@@ -440,8 +440,6 @@
                         <property name="window_placement">bottom-left</property>
                         <property name="shadow_type">in</property>
                         <property name="overlay_scrolling">False</property>
-                        <property name="propagate_natural_width">True</property>
-                        <property name="propagate_natural_height">True</property>
                         <child>
                           <object class="GtkTextView" id="textview_chat">
                             <property name="name">textview_chat</property>
