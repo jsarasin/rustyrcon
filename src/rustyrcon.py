@@ -2,22 +2,12 @@
 
 # sudo -H pip3 install appdirs
 
-#
-# (rustyrcon.py:7098): Gtk-WARNING **: 00:50:46.359: Invalid text buffer iterator: either the iterator is uninitialized, or the characters/pixbufs/widgets in the buffer have been modified since the iterator was created.
-# You must use marks, character numbers, or line numbers to preserve a position across buffer modifications.
-# You can apply tags and insert marks without invalidating your iterators,
-# but any mutation that affects 'indexable' buffer contents (contents that can be referred to by character offset)
-# will invalidate all outstanding iterators
-#
-# (rustyrcon.py:7098): Gtk-WARNING **: 00:50:46.359: Invalid text buffer iterator: either the iterator is uninitialized, or the characters/pixbufs/widgets in the buffer have been modified since the iterator was created.
-# You must use marks, character numbers, or line numbers to preserve a position across buffer modifications.
-# You can apply tags and insert marks without invalidating your iterators,
-# but any mutation that affects 'indexable' buffer contents (contents that can be referred to by character offset)
-# will invalidate all outstanding iterators
+# TODO:
+# When there's no inet available:
+#   BrokenPipeError: [Errno 32] Broken pipe
 
-# (rustyrcon.py:4773): Gtk-ERROR **: 19:33:14.339: Unknown segment type: \xc0\\xa9\u0001
-
-
+# When fucking shaw isn't working:
+#   OSError: [Errno 101] Network is unreachable
 
 import time
 from datetime import datetime
@@ -38,6 +28,8 @@ from betterbuffer import BetterBuffer, scroll_to_textview_bottom
 from ws4py.exc import HandshakeError
 from rust import RustMessageType, get_console_message_info
 
+from command_browser import WindowCommandBrowser
+
 
 class BufferManager:
     def __init__(self, buffer):
@@ -49,6 +41,9 @@ class Autocomplete:
 
 class MainWindow:
     def __init__(self):
+        # Other windows
+        self.command_browser = None
+
         # Program initialization
         self.autocomplete = None
         self.pyrcon = None
@@ -56,6 +51,11 @@ class MainWindow:
         self.server_list = []
         self.default_connection = ""
         self.editing_connection = None
+
+        # Keeping track of up/down on the console text entry
+        self.console_history = []
+        self.console_history_select = None
+        self.console_history_moved = False
 
         # Program data
         self.entity_list = None
@@ -150,8 +150,14 @@ class MainWindow:
         # Console
         self.textentry_console = builder.get_object("textentry_console")
         self.textentry_console.connect('activate', self.event_button_send_console)
+        self.textentry_console.add_events(Gdk.EventMask.KEY_PRESS_MASK) #Gdk.EventMask.KEY_PRESS_MASK
+        self.textentry_console.connect('key-press-event', self.event_textentry_console_keypress)
+
+
         self.button_console_send = builder.get_object("button_console_send")
         self.button_console_send.connect('clicked', self.event_button_send_console)
+        self.button_command_browser = builder.get_object('button_command_browser')
+        self.button_command_browser.connect('clicked', self.event_button_command_browser)
 
         self.textview_console = builder.get_object("textview_console")
         self.textbuffer_console = BetterBuffer()
@@ -160,11 +166,15 @@ class MainWindow:
         self.textbuffer_console.create_tag("console_command", paragraph_background="black", foreground='lightgreen', weight=Pango.Weight.BOLD)
         self.textbuffer_console.create_tag("time", foreground="darkgrey", style=Pango.Style.ITALIC, scale=0.75)
         self.textbuffer_console.create_tag("cat", paragraph_background="red", foreground='white', style=Pango.Style.ITALIC, scale=0.75)
-        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.SAVE))
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.EXCEPTION), foreground='red', paragraph_background='black')
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.EVENT), foreground='lightblue')
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.MANIFEST_UPDATE), foreground='lightgreen')
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.SAVE), foreground='darkgrey')
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.SERVERVAR), foreground='lightyellow')
         self.textbuffer_console.create_tag('mtype' + str(RustMessageType.CONNECT))
         self.textbuffer_console.create_tag('mtype' + str(RustMessageType.DISCONNECT_GAME), foreground='Red')
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.DISCONNECT_FAILED), foreground='Red')
         self.textbuffer_console.create_tag('mtype' + str(RustMessageType.LOAD_BEGIN), foreground='Red')
-        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.MANIFEST_UPDATE))
         self.textbuffer_console.create_tag('mtype' + str(RustMessageType.CHAT))
         self.textbuffer_console.create_tag('mtype' + str(RustMessageType.ENTER_GAME), foreground='Green')
         self.textbuffer_console.create_tag('mtype' + str(RustMessageType.KILLED_BY_PLAYER))
@@ -213,8 +223,6 @@ class MainWindow:
 
         self.treestore_players = Gtk.TreeStore(str, str, int, str, float)
         self.treeview_players.set_model(self.treestore_players)
-
-
 
         # Loadout Gift
         self.textentry_receiving_player = builder.get_object("textentry_receiving_player")
@@ -285,6 +293,10 @@ class MainWindow:
             if server['name'] == connection_name:
                 self.combo_servers.set_active(index)
                 break
+
+    def event_button_command_browser(self, button):
+        self.command_browser.window.show_all()
+
 
     def event_check_visible_toggled(self, check):
         if check is self.check_visible_save:
@@ -524,7 +536,65 @@ class MainWindow:
         self.textbuffer_console.insert_with_tags(last_iter, console_command, *tags)
 
         self.send_console_message(self.textentry_console.get_text())
+
+        if self.console_history_moved:
+            self.console_history[len(self.console_history) - 1] = self.textentry_console.get_text()
+        else:
+            self.console_history.append(self.textentry_console.get_text())
+        self.console_history_select = None
+        self.console_history_moved = False
+
         self.textentry_console.set_text('')
+
+    def event_textentry_console_keypress(self, widget, eventkey):
+        UP = 111
+        DOWN = 116
+        MOVE_UP = -1
+        MOVE_DOWN = 1
+
+        if eventkey.hardware_keycode == UP:
+            move_direction = MOVE_UP
+        elif eventkey.hardware_keycode == DOWN:
+            move_direction = MOVE_DOWN
+        else:
+            move_direction = 0
+
+        if move_direction != 0:
+            if move_direction == MOVE_UP:
+                # If there's somewhere to move
+                if len(self.console_history) > 0:
+                    if self.console_history_select == None:
+                        self.console_history.append(self.textentry_console.get_text())
+                        self.console_history_select = len(self.console_history) - 2
+                        self.textentry_console.set_text(self.console_history[self.console_history_select])
+                        self.console_history_moved = True
+                        return True
+                else:
+                    return True
+                # Keep them from going before the beginning
+                if self.console_history_select == 0:
+                    return True
+                self.console_history_select = self.console_history_select - 1
+                self.textentry_console.set_text(self.console_history[self.console_history_select])
+
+                # Move the cursor to the end of the line
+                max = self.textentry_console.get_text_length()
+                self.textentry_console.set_position(max)
+
+            if move_direction == MOVE_DOWN:
+                if self.console_history_select == None:
+                    return True
+                if self.console_history_select >= len(self.console_history) - 1:
+                    return True
+                self.console_history_select = self.console_history_select + 1
+                self.textentry_console.set_text(self.console_history[self.console_history_select])
+
+                # Move the cursor to the end of the line
+                max = self.textentry_console.get_text_length()
+                self.textentry_console.set_position(max)
+            return True
+
+        return False
 
     def connection_edit_form_to_struct(self):
         struct = dict()
@@ -583,7 +653,6 @@ class MainWindow:
 
         tags = []
         message_info = get_console_message_info(message)
-        print(message_info)
         if message_info['message_type'] != RustMessageType.UNKNOWN:
             tags.append(self.textbuffer_console.get_tag_table().lookup("mtype" + str(message_info['message_type'])))
 
@@ -722,6 +791,8 @@ class MainWindow:
 
         self.build_console_entry_completion(commands, variables)
 
+        self.command_browser = WindowCommandBrowser(commands, variables)
+
     def pyrcon_cb_player_update(self, message):
         data = json.loads(message)
         self.treeview_players.set_model(None)
@@ -765,5 +836,14 @@ class MainWindow:
         self.textbuffer_chat.delete(start, end)
 
 
-mw = MainWindow()
-Gtk.main()
+def launch_app():
+    mw = MainWindow()
+    Gtk.main()
+
+def quick_test():
+    cat = r'216.198.166.192:1904/76561198317244272/Levy disconnecting: disconnect'
+    res = get_console_message_info(cat)
+    print(res)
+
+launch_app()
+

@@ -440,6 +440,8 @@
                         <property name="window_placement">bottom-left</property>
                         <property name="shadow_type">in</property>
                         <property name="overlay_scrolling">False</property>
+                        <property name="propagate_natural_width">True</property>
+                        <property name="propagate_natural_height">True</property>
                         <child>
                           <object class="GtkTextView" id="textview_chat">
                             <property name="name">textview_chat</property>
@@ -449,10 +451,6 @@
                             <property name="pixels_below_lines">2</property>
                             <property name="editable">False</property>
                             <property name="wrap_mode">word-char</property>
-                            <property name="left_margin">2</property>
-                            <property name="right_margin">2</property>
-                            <property name="top_margin">2</property>
-                            <property name="bottom_margin">2</property>
                             <property name="cursor_visible">False</property>
                           </object>
                         </child>
@@ -637,6 +635,8 @@
                         <property name="vscrollbar_policy">always</property>
                         <property name="shadow_type">in</property>
                         <property name="overlay_scrolling">False</property>
+                        <property name="propagate_natural_width">True</property>
+                        <property name="propagate_natural_height">True</property>
                         <child>
                           <object class="GtkTextView" id="textview_console">
                             <property name="visible">True</property>
@@ -644,10 +644,6 @@
                             <property name="pixels_above_lines">5</property>
                             <property name="pixels_below_lines">2</property>
                             <property name="editable">False</property>
-                            <property name="left_margin">2</property>
-                            <property name="right_margin">2</property>
-                            <property name="top_margin">2</property>
-                            <property name="bottom_margin">2</property>
                             <property name="cursor_visible">False</property>
                             <property name="monospace">True</property>
                           </object>
@@ -665,7 +661,7 @@
                         <property name="can_focus">False</property>
                         <property name="spacing">5</property>
                         <child>
-                          <object class="GtkButton">
+                          <object class="GtkButton" id="button_command_browser">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="focus_on_click">False</property>

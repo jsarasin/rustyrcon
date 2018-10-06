@@ -1,6 +1,7 @@
 import re
 
 class RustMessageType:
+    EVENT = 10
     SAVE = 11
     CONNECT = 12
     LOAD_BEGIN = 14
@@ -14,9 +15,12 @@ class RustMessageType:
     UNKNOWN = 22
     JOINED = 23
     DISCONNECT_FAILED = 24
+    SERVERVAR = 25
+    EXCEPTION = 26
 
 def get_console_message_info(message):
-    event = r'(\[event\]\ )(.*)'
+    servervar = r'\[ServerVar\]\ (.*)'
+    event = r'\[event\]\ (.*)'
     saved = r'(Saved\ .*ents,\ cache\(.*\), write\(.*\), disk\(.*\)\.)|(Saving\ complete)'
     manifest = r'\[Manifest\]\ URI\ IS\ \"(.*)\"'
     killed_entity = r'(.*)\[([0-9]*)\/([0-9]*)\]\ was\ killed\ by\ ([^\ ]*)(\ \(entity\))$'
@@ -25,8 +29,9 @@ def get_console_message_info(message):
     joined = r'(.+):([0-9]*)\/([0-9]*)\/([^\ ]*)\ joined\ \[([^/]+)\/([0-9]+)\]'
     entered = r'([^\ ]*)\[([0-9]*)\/([0-9]*)\]\ has\ entered\ the\ game'
     disconnect = r'(.+):([0-9]*)\/([0-9]*)\/([^\ ]*)\ disconnecting\:\ closing'
-    disconnect_failed = r'(.+):([0-9]*)\/([0-9]*)\/([^\ ]*)\ disconnecting\:\ disconnect[?:$|\n]'
+    disconnect_failed = r'(.+):([0-9]*)\/([0-9]*)\/([^\ ]*)\ disconnecting\:\ disconnect'
     chat = r'\[CHAT\]\ ([^[]*)\[([0-9]*)\/([0-9]*)\]\ \:\ (.*)(?:$|\n)'
+    exception = r'Exception|exception'
     result = dict()
 
     try:
@@ -34,6 +39,33 @@ def get_console_message_info(message):
         m = re.search(saved, message)
         if m is not None:
             result['message_type'] = RustMessageType.SAVE
+            return result
+
+        # Exception
+        m = re.search(exception, message)
+        if m is not None:
+            result['message_type'] = RustMessageType.EXCEPTION
+            return result
+
+        # Event
+        m = re.search(event, message)
+        if m is not None:
+            result['message_type'] = RustMessageType.EVENT
+            result['event_type'] = m.group(1)
+            return result
+
+        # ServerVar
+        m = re.search(servervar, message)
+        if m is not None:
+            result['message_type'] = RustMessageType.SERVERVAR
+            result['message'] = m.group(1)
+            return result
+
+        # Manifest
+        m = re.search(manifest, message)
+        if m is not None:
+            result['message_type'] = RustMessageType.MANIFEST_UPDATE
+            result['url'] = m.group(1)
             return result
 
         # Manifest Update
