@@ -68,7 +68,7 @@ class WindowCommandBrowser:
 
         self.textview_description = builder.get_object('textview_description')
         self.textbuffer_description = Gtk.TextBuffer()
-        self.textbuffer_description.create_tag('command', foreground='green', paragraph_background='black', weight=Pango.Weight.BOLD)
+        self.textbuffer_description.create_tag('command', foreground='lightgreen', paragraph_background='black', weight=Pango.Weight.BOLD)
         self.textbuffer_description.create_tag('description', style=Pango.Style.ITALIC, left_margin=10)
         self.textview_description.set_buffer(self.textbuffer_description)
 
@@ -106,7 +106,10 @@ class WindowCommandBrowser:
 
     def event_treeview_command_row_activated(self, treeview, path, column):
         if path.get_depth() == 1:
-            treeview.expand_row(path, True)
+            if treeview.row_expanded(path):
+                treeview.collapse_row(path)
+            else:
+                treeview.expand_row(path, True)
             return False
 
         if self.checkbutton_insertclose_activate.get_active():
