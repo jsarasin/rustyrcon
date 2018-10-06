@@ -9,6 +9,18 @@
 # When fucking shaw isn't working:
 #   OSError: [Errno 101] Network is unreachable
 
+# TODO:
+# Hints about what to look for to generate a map
+# World
+# 	Seed:        2348041
+# 	Size:        4 km²
+# 	Heightmap:   2 MB
+# 	Watermap:    2 MB
+# 	Splatmap:    8 MB
+# 	Biomemap:    4 MB
+# 	Topologymap: 4 MB
+# 	Alphamap:    1 MB
+
 import time
 from datetime import datetime
 from datetime import timedelta
@@ -109,11 +121,11 @@ class MainWindow:
         self.combo_servers.connect('changed', self.event_combo_servers_changed)
 
         self.button_new_connection = builder.get_object('button_new_connection')
-        self.button_new_connection.connect("clicked", self.event_button_new_clicked)
+        self.button_new_connection.connect("clicked", self.event_button_new_server_clicked)
         self.button_edit_connection = builder.get_object('button_edit_connection')
-        self.button_edit_connection.connect("clicked", self.event_button_edit_clicked)
+        self.button_edit_connection.connect("clicked", self.event_button_edit_server_clicked)
         self.button_delete_connection = builder.get_object('button_delete_connection')
-        self.button_delete_connection.connect("clicked", self.event_button_delete_clicked)
+        self.button_delete_connection.connect("clicked", self.event_button_delete_server_clicked)
 
         # Connection Editor
         self.stack_connect = builder.get_object('stack_connect')
@@ -122,7 +134,7 @@ class MainWindow:
         self.entry_port = builder.get_object('entry_port')
         self.entry_password = builder.get_object('entry_password')
         self.button_save_connection = builder.get_object('button_save_connection')
-        self.button_save_connection.connect('clicked', self.event_button_save_connection_clicked)
+        self.button_save_connection.connect('clicked', self.event_button_save_server_clicked)
         self.button_discard_connection = builder.get_object('button_discard_connection')
         self.button_discard_connection.connect('clicked', self.event_button_discard_connection)
 
@@ -149,13 +161,13 @@ class MainWindow:
 
         # Console
         self.textentry_console = builder.get_object("textentry_console")
-        self.textentry_console.connect('activate', self.event_button_send_console)
+        self.textentry_console.connect('activate', self.event_button_console_send)
         self.textentry_console.add_events(Gdk.EventMask.KEY_PRESS_MASK) #Gdk.EventMask.KEY_PRESS_MASK
         self.textentry_console.connect('key-press-event', self.event_textentry_console_keypress)
 
 
         self.button_console_send = builder.get_object("button_console_send")
-        self.button_console_send.connect('clicked', self.event_button_send_console)
+        self.button_console_send.connect('clicked', self.event_button_console_send)
         self.button_command_browser = builder.get_object('button_command_browser')
         self.button_command_browser.connect('clicked', self.event_button_command_browser)
 
@@ -193,19 +205,6 @@ class MainWindow:
         self.button_console_clear = builder.get_object('button_console_clear')
         self.button_console_clear.connect('clicked', self.event_button_console_clear_clicked)
         self.popover_console_visible = builder.get_object('popover_console_visible')
-
-        self.check_visible_save = builder.get_object('check_visible_save')
-        self.check_visible_save.connect('toggled', self.event_check_visible_toggled)
-        self.check_visible_connect = builder.get_object('check_visible_connect')
-        self.check_visible_connect.connect('toggled', self.event_check_visible_toggled)
-        self.check_visible_disconnect = builder.get_object('check_visible_disconnect')
-        self.check_visible_disconnect.connect('toggled', self.event_check_visible_toggled)
-        self.check_visible_load_begin = builder.get_object('check_visible_load_begin')
-        self.check_visible_load_begin.connect('toggled', self.event_check_visible_toggled)
-        self.check_visible_manifest = builder.get_object('check_visible_manifest')
-        self.check_visible_manifest.connect('toggled', self.event_check_visible_toggled)
-        self.check_visible_chat = builder.get_object('check_visible_chat')
-        self.check_visible_chat.connect('toggled', self.event_check_visible_toggled)
 
         # Players
         self.treeview_players = builder.get_object('treeview_players')
@@ -297,40 +296,6 @@ class MainWindow:
     def event_button_command_browser(self, button):
         self.command_browser.window.show_all()
 
-
-    def event_check_visible_toggled(self, check):
-        if check is self.check_visible_save:
-            tag = self.textbuffer_console.get_tag_table().lookup('mtype' + str(RustMessageType.SAVE))
-        if check is self.check_visible_chat:
-            tag = self.textbuffer_console.get_tag_table().lookup('mtype' + str(RustMessageType.CHAT))
-        if check is self.check_visible_connect:
-            tag = self.textbuffer_console.get_tag_table().lookup('mtype' + str(RustMessageType.CONNECT))
-        if check is self.check_visible_disconnect:
-            tag = self.textbuffer_console.get_tag_table().lookup('mtype' + str(RustMessageType.DISCONNECT_GAME))
-        # if check is self.check_visible_:
-        #     tag = self.textbuffer_console.get_tag_table().lookup('mtype' + str(RustMessageType.ENTER_GAME))
-        # if check is self.check_visible_chat:
-        #     tag = self.textbuffer_console.get_tag_table().lookup('mtype' + str(RustMessageType.KILLED_BY_ENTITY))
-        # if check is self.check_visible_chat:
-        #     tag = self.textbuffer_console.get_tag_table().lookup('mtype' + str(RustMessageType.KILLED_BY_PLAYER))
-        if check is self.check_visible_load_begin:
-            tag = self.textbuffer_console.get_tag_table().lookup('mtype' + str(RustMessageType.LOAD_BEGIN))
-        if check is self.check_visible_manifest:
-            tag = self.textbuffer_console.get_tag_table().lookup('mtype' + str(RustMessageType.MANIFEST_UPDATE))
-        # if check is self.check_visible_chat:
-        #     tag = self.textbuffer_console.get_tag_table().lookup('mtype' + str(RustMessageType.SUICIDE))
-
-
-        if check.get_active():
-            pass
-            # tag.props.size = 0.0
-        else:
-            tag.props.size_set = True
-            tag.props.size_points = 0.0
-
-            pass
-            # tag.props.size = 1024.0
-
     def event_button_console_clear_clicked(self, button):
         self.reset_interface()
 
@@ -346,7 +311,7 @@ class MainWindow:
         self.default_connection = selected
         self.write_config_file()
 
-    def event_button_new_clicked(self, button):
+    def event_button_new_server_clicked(self, button):
         self.entry_server_name.set_text('')
         self.entry_server_address.set_text('')
         self.entry_port.set_text('')
@@ -354,7 +319,7 @@ class MainWindow:
         self.editing_connection = ""
         self.stack_connect.set_visible_child_name('page_edit')
 
-    def event_button_edit_clicked(self, button):
+    def event_button_edit_server_clicked(self, button):
         server = self.get_selected_connection()
 
         self.entry_server_name.set_text(server['name'])
@@ -365,7 +330,7 @@ class MainWindow:
         self.editing_connection = server['name']
         self.stack_connect.set_visible_child_name('page_edit')
 
-    def event_button_delete_clicked(self, button):
+    def event_button_delete_server_clicked(self, button):
         dialog = Gtk.Dialog()
         dialog.set_transient_for(self.window)
         dialog.add_button("Delete", 0)
@@ -395,7 +360,7 @@ class MainWindow:
 
         # Ensure selection or switch to the new connection stack
         if len(self.combo_servers.get_model()) == 0:
-            self.event_button_new_clicked(button)
+            self.event_button_new_server_clicked(button)
             self.button_discard_connection.hide()
             self.default_connection = ''
         else:
@@ -403,7 +368,7 @@ class MainWindow:
             self.default_connection = self.combo_servers.get_active()
 
 
-    def event_button_save_connection_clicked(self, button):
+    def event_button_save_server_clicked(self, button):
         combo_selected_index = self.combo_servers.get_active()
 
         if self.entry_server_name.get_text() == '':
@@ -524,10 +489,16 @@ class MainWindow:
         Gtk.main_quit()
         return False
 
-    def event_button_send_console(self, button):
+    def event_button_console_send(self, button):
         console_command = ''
+
+        # Dont send empty commands
+        if len(self.textentry_console.get_text()) == 0:
+            return False
+
         if self.textbuffer_console.get_char_count() > 0:
             console_command = "\n"
+
 
         console_command = console_command + " $ " + self.textentry_console.get_text()
         tags = [self.textbuffer_console.get_tag("console_command")]
@@ -568,6 +539,11 @@ class MainWindow:
                         self.console_history_select = len(self.console_history) - 2
                         self.textentry_console.set_text(self.console_history[self.console_history_select])
                         self.console_history_moved = True
+
+                        # Move the cursor to the end of the line
+                        max = self.textentry_console.get_text_length()
+                        self.textentry_console.set_position(max)
+
                         return True
                 else:
                     return True
@@ -741,6 +717,23 @@ class MainWindow:
         self.pyrcon.close()
         self.revealer_disconnect.set_reveal_child(False)
 
+    #####################################
+    # Callbacks inherent to this window #
+    #####################################
+    def cb_set_console_command(self, command):
+        self.console_history_select = None
+
+        if self.console_history_moved:
+            self.console_history.pop()
+            self.textentry_console.set_text(command)
+            self.console_history_moved = False
+        else:
+            self.textentry_console.set_text(command)
+
+        # Move the cursor to the end of the line
+        max = self.textentry_console.get_text_length()
+        self.textentry_console.set_position(max)
+
     ##################################
     # Callbacks for server responses #
     ##################################
@@ -792,6 +785,7 @@ class MainWindow:
         self.build_console_entry_completion(commands, variables)
 
         self.command_browser = WindowCommandBrowser(commands, variables)
+        self.command_browser.activate_callback = self.cb_set_console_command
 
     def pyrcon_cb_player_update(self, message):
         data = json.loads(message)
