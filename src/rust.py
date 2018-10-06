@@ -11,46 +11,117 @@ class RustMessageType:
     KILLED_BY_PLAYER = 19
     KILLED_BY_ENTITY = 20
     SUICIDE = 21
+    UNKNOWN = 22
+    JOINED = 23
+    DISCONNECT_FAILED = 24
 
 def get_console_message_info(message):
     event = r'(\[event\]\ )(.*)'
     saved = r'(Saved\ .*ents,\ cache\(.*\), write\(.*\), disk\(.*\)\.)|(Saving\ complete)'
     manifest = r'\[Manifest\]\ URI\ IS\ \"(.*)\"'
     killed_entity = r'(.*)\[([0-9]*)\/([0-9]*)\]\ was\ killed\ by\ ([^\ ]*)(\ \(entity\))$'
-    killed_player = r'(.*)\[([0-9]*)\/([0-9]*)\]\ was\ killed\ by\ ([^\ ]*)$'
+    killed_player = r'(.*)\[([0-9]*)\/([0-9]*)\]\ was\ killed\ by\ ([^\ ]*)(?:$|\n)'
     load_begin = r'(.+):([0-9]*)\/([0-9]*)\/([^\ ]*)\ has\ auth\ level\ ([0-9])'
+    joined = r'(.+):([0-9]*)\/([0-9]*)\/([^\ ]*)\ joined\ \[([^/]+)\/([0-9]+)\]'
     entered = r'([^\ ]*)\[([0-9]*)\/([0-9]*)\]\ has\ entered\ the\ game'
     disconnect = r'(.+):([0-9]*)\/([0-9]*)\/([^\ ]*)\ disconnecting\:\ closing'
+    disconnect_failed = r'(.+):([0-9]*)\/([0-9]*)\/([^\ ]*)\ disconnecting\:\ disconnect[?:$|\n]'
+    chat = r'\[CHAT\]\ ([^[]*)\[([0-9]*)\/([0-9]*)\]\ \:\ (.*)(?:$|\n)'
+    result = dict()
 
-    m = re.search(saved, message)
-    if m != None:
-        return RustMessageType.SAVE
+    try:
+        # Save
+        m = re.search(saved, message)
+        if m is not None:
+            result['message_type'] = RustMessageType.SAVE
+            return result
 
-    m = re.search(manifest, message)
-    if m != None:
-        return RustMessageType.MANIFEST_UPDATE
+        # Manifest Update
+        m = re.search(manifest, message)
+        if m is not None:
+            result['message_type'] = RustMessageType.MANIFEST_UPDATE
+            return result
 
-    m = re.search(killed_entity, message)
-    if m != None:
-        return RustMessageType.KILLED_BY_ENTITY
+        # Killed by entity
+        m = re.search(killed_entity, message)
+        if m is not None:
+            result['message_type'] = RustMessageType.KILLED_BY_ENTITY
+            return result
 
-    m = re.search(killed_player, message)
-    if m != None:
-        return RustMessageType.KILLED_BY_PLAYER
+        # Killed by player
+        m = re.search(killed_player, message)
+        if m is not None:
+            result['message_type'] = RustMessageType.KILLED_BY_PLAYER
+            return result
 
-    m = re.search(load_begin, message)
-    if m != None:
-        return RustMessageType.LOAD_BEGIN
+        # Begin loading the game resources
+        m = re.search(load_begin, message)
+        if m is not None:
+            return RustMessageType.LOAD_BEGIN
 
-    m = re.search(entered, message)
-    if m != None:
-        return RustMessageType.ENTER_GAME
+        # Joined loading the game
+        m = re.search(joined, message)
+        if m is not None:
+            assert(m.group(3) == m.group(6)) # For some reason rust puts the steam ID twice. Make sure this doesnt mean something
+            result['message_type'] = RustMessageType.JOINED
+            result['ip'] = m.group(1)
+            result['steam_id'] = m.group(3)
+            result['os'] = m.group(5)
+            result['player_name'] = m.group(4)
+            return result
 
-    m = re.search(disconnect, message)
-    if m != None:
-        return RustMessageType.DISCONNECT_GAME
+        # Player Spawn
+        m = re.search(entered, message)
+        if m is not None:
+            result['message_type'] = RustMessageType.ENTER_GAME
+            result['player_name'] = m.group(1)
+            result['steam_id'] = steam_id = m.group(3)
+            return result
 
-    return None
+        # Disconnect
+        m = re.search(disconnect, message)
+        if m is not None:
+            result['message_type'] = RustMessageType.DISCONNECT_GAME
+            result['ip'] = m.group(1)
+            result['steam_id'] = m.group(3)
+            result['player_name'] = m.group(4)
+            return result
+
+        # Disconnect failed
+        m = re.search(disconnect_failed, message)
+        if m is not None:
+            result['message_type'] = RustMessageType.DISCONNECT_FAILED
+            result['ip'] = m.group(1)
+            result['steam_id'] = m.group(3)
+            result['player_name'] = m.group(4)
+            return result
+
+        # Chat
+        m = re.search(chat, message)
+        if m is not None:
+            result['message_type'] = RustMessageType.CHAT
+            result['player_name'] = m.group(1)
+            result['steam_id'] = m.group(3)
+            result['message'] = m.group(4)
+            return result
+
+    except TypeError as e:
+        print("TypeError in console message parsing.")
+        print("exception:", e)
+        print("message:", message)
+    except IndexError as e:
+        print("IndexError no such group.")
+        print("exception:", e)
+        print("message:", message)
+        print("reg ex result", m)
+        for index, item in enumerate(m):
+            print(" #%s: %s" % (index,item))
+
+
+
+    result['message_type'] = RustMessageType.UNKNOWN
+    return result
+
     # print('reg:', m)
     # print('groups:', m.groups())
 

@@ -469,27 +469,7 @@
                         <property name="can_focus">False</property>
                         <property name="spacing">5</property>
                         <child>
-                          <object class="GtkComboBoxText">
-                            <property name="name">combotext_chat_from</property>
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="active">0</property>
-                            <property name="has_entry">True</property>
-                            <items>
-                              <item translatable="yes">SERVER</item>
-                            </items>
-                            <child internal-child="entry">
-                              <object class="GtkEntry" id="textentry_chat_who">
-                                <property name="name">textentry_chat_from</property>
-                                <property name="can_focus">False</property>
-                              </object>
-                            </child>
-                          </object>
-                          <packing>
-                            <property name="expand">False</property>
-                            <property name="fill">True</property>
-                            <property name="position">0</property>
-                          </packing>
+                          <placeholder/>
                         </child>
                         <child>
                           <object class="GtkColorButton" id="buttoncolor_chat">

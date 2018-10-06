@@ -160,15 +160,16 @@ class MainWindow:
         self.textbuffer_console.create_tag("console_command", paragraph_background="black", foreground='lightgreen', weight=Pango.Weight.BOLD)
         self.textbuffer_console.create_tag("time", foreground="darkgrey", style=Pango.Style.ITALIC, scale=0.75)
         self.textbuffer_console.create_tag("cat", paragraph_background="red", foreground='white', style=Pango.Style.ITALIC, scale=0.75)
-        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.SAVE), invisible=False, invisible_set=True)
-        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.CONNECT), invisible=False, invisible_set=True)
-        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.DISCONNECT_GAME), invisible=False, invisible_set=True)
-        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.LOAD_BEGIN), invisible=False, invisible_set=True)
-        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.MANIFEST_UPDATE), invisible=False, invisible_set=True)
-        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.CHAT), invisible=False, invisible_set=True)
-        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.ENTER_GAME), invisible=False, invisible_set=True)
-        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.KILLED_BY_PLAYER), invisible=False, invisible_set=True)
-        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.KILLED_BY_ENTITY), invisible=False, invisible_set=True)
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.SAVE))
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.CONNECT))
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.DISCONNECT_GAME), foreground='Red')
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.LOAD_BEGIN), foreground='Red')
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.MANIFEST_UPDATE))
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.CHAT))
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.ENTER_GAME), foreground='Green')
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.KILLED_BY_PLAYER))
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.KILLED_BY_ENTITY), foreground='Yellow')
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.JOINED), foreground='Green')
         self.textview_console.set_buffer(self.textbuffer_console)
 
 
@@ -581,9 +582,10 @@ class MainWindow:
             first_item = False
 
         tags = []
-        message_type = get_console_message_info(message)
-        if message_type is not None:
-            tags.append(self.textbuffer_console.get_tag_table().lookup("mtype" + str(message_type)))
+        message_info = get_console_message_info(message)
+        print(message_info)
+        if message_info['message_type'] != RustMessageType.UNKNOWN:
+            tags.append(self.textbuffer_console.get_tag_table().lookup("mtype" + str(message_info['message_type'])))
 
         if first_item:
             console_message = ''
