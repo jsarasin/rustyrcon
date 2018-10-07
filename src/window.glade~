@@ -28,11 +28,6 @@
     <property name="can_focus">False</property>
     <property name="stock">gtk-help</property>
   </object>
-  <object class="GtkImage" id="image3">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="stock">gtk-find</property>
-  </object>
   <object class="GtkWindow" id="window">
     <property name="width_request">977</property>
     <property name="height_request">663</property>
@@ -604,13 +599,12 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkButton" id="button_console_view_settings">
-                            <property name="label" translatable="yes">View</property>
-                            <property name="can_focus">False</property>
-                            <property name="focus_on_click">False</property>
+                          <object class="GtkButton" id="button_find_console">
+                            <property name="label">gtk-find</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
                             <property name="receives_default">True</property>
-                            <property name="no_show_all">True</property>
-                            <property name="image">image3</property>
+                            <property name="use_stock">True</property>
                             <property name="always_show_image">True</property>
                           </object>
                           <packing>
@@ -662,6 +656,7 @@
                             <property name="can_focus">False</property>
                             <property name="focus_on_click">False</property>
                             <property name="receives_default">True</property>
+                            <property name="tooltip_text" translatable="yes">Command Browser</property>
                             <property name="image">image2</property>
                             <property name="relief">half</property>
                           </object>
@@ -669,6 +664,21 @@
                             <property name="expand">False</property>
                             <property name="fill">True</property>
                             <property name="position">0</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="button_item_browser">
+                            <property name="label" translatable="yes">🔨</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="focus_on_click">False</property>
+                            <property name="receives_default">True</property>
+                            <property name="tooltip_text" translatable="yes">Command Browser</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">1</property>
                           </packing>
                         </child>
                         <child>
@@ -683,7 +693,7 @@
                           <packing>
                             <property name="expand">True</property>
                             <property name="fill">True</property>
-                            <property name="position">1</property>
+                            <property name="position">2</property>
                           </packing>
                         </child>
                         <child>
@@ -699,7 +709,7 @@
                           <packing>
                             <property name="expand">False</property>
                             <property name="fill">True</property>
-                            <property name="position">2</property>
+                            <property name="position">3</property>
                           </packing>
                         </child>
                       </object>
@@ -999,37 +1009,38 @@
       <widget name="stack_rcon"/>
     </widgets>
   </object>
-  <object class="GtkPopover" id="popover_console_visible">
+  <object class="GtkPopover" id="popover_search_console">
+    <property name="width_request">610</property>
     <property name="can_focus">False</property>
-    <property name="relative_to">button_console_view_settings</property>
+    <property name="relative_to">textview_console</property>
     <child>
       <object class="GtkBox">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
-        <property name="orientation">vertical</property>
+        <property name="spacing">5</property>
         <child>
-          <object class="GtkCheckButton" id="check_visible_save">
-            <property name="label" translatable="yes">Save Messages</property>
+          <object class="GtkSearchEntry">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
-            <property name="receives_default">False</property>
-            <property name="active">True</property>
-            <property name="draw_indicator">True</property>
+            <property name="primary_icon_name">edit-find-symbolic</property>
+            <property name="primary_icon_activatable">False</property>
+            <property name="primary_icon_sensitive">False</property>
+            <property name="placeholder_text" translatable="yes">Search Console Output</property>
           </object>
           <packing>
-            <property name="expand">False</property>
+            <property name="expand">True</property>
             <property name="fill">True</property>
             <property name="position">0</property>
           </packing>
         </child>
         <child>
-          <object class="GtkCheckButton" id="check_visible_connect">
-            <property name="label" translatable="yes">Connect</property>
+          <object class="GtkButton">
+            <property name="label">gtk-media-previous</property>
             <property name="visible">True</property>
             <property name="can_focus">True</property>
-            <property name="receives_default">False</property>
-            <property name="active">True</property>
-            <property name="draw_indicator">True</property>
+            <property name="receives_default">True</property>
+            <property name="use_stock">True</property>
+            <property name="always_show_image">True</property>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -1038,63 +1049,18 @@
           </packing>
         </child>
         <child>
-          <object class="GtkCheckButton" id="check_visible_disconnect">
-            <property name="label" translatable="yes">Disconnect</property>
+          <object class="GtkButton">
+            <property name="label">gtk-media-next</property>
             <property name="visible">True</property>
             <property name="can_focus">True</property>
-            <property name="receives_default">False</property>
-            <property name="active">True</property>
-            <property name="draw_indicator">True</property>
+            <property name="receives_default">True</property>
+            <property name="use_stock">True</property>
+            <property name="always_show_image">True</property>
           </object>
           <packing>
             <property name="expand">False</property>
             <property name="fill">True</property>
             <property name="position">2</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkCheckButton" id="check_visible_load_begin">
-            <property name="label" translatable="yes">Load Begin</property>
-            <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="receives_default">False</property>
-            <property name="active">True</property>
-            <property name="draw_indicator">True</property>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">True</property>
-            <property name="position">3</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkCheckButton" id="check_visible_manifest">
-            <property name="label" translatable="yes">Manifest Updates</property>
-            <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="receives_default">False</property>
-            <property name="active">True</property>
-            <property name="draw_indicator">True</property>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">True</property>
-            <property name="position">4</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkCheckButton" id="check_visible_chat">
-            <property name="label" translatable="yes">Chat Messages</property>
-            <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="receives_default">False</property>
-            <property name="active">True</property>
-            <property name="draw_indicator">True</property>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">True</property>
-            <property name="position">5</property>
           </packing>
         </child>
       </object>

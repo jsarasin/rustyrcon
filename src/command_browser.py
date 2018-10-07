@@ -4,8 +4,9 @@ from gi.repository import Gtk, GdkPixbuf, GObject, GLib, Gdk, cairo, Gio, Pango,
 from betterbuffer import BetterBuffer, scroll_to_textview_bottom
 
 class WindowCommandBrowserItemType:
-    COMMAND = 1
-    VARIABLE = 2
+    COMMAND = 'emblem-system'
+    VARIABLE = 'dialog-information'
+    CATAGORY = 'folder'
 
 class WindowCommandBrowser:
     def __init__(self, command_list, variable_list):
@@ -32,9 +33,9 @@ class WindowCommandBrowser:
 
 
         # Convert this organized list into a Gtk.TreeStore
-        self.treestore_commands = Gtk.TreeStore(int, str, str)
+        self.treestore_commands = Gtk.TreeStore(str, str, str)
         for root in command_breakdown:
-            parent = self.treestore_commands.append(None, [0, root, ''])
+            parent = self.treestore_commands.append(None, [WindowCommandBrowserItemType.CATAGORY, root, ''])
             for cattype, command, description in command_breakdown[root]:
                 self.treestore_commands.append(parent, [cattype, command, description])
 
@@ -54,9 +55,9 @@ class WindowCommandBrowser:
         self.treeview_commands.connect('row-activated', self.event_treeview_command_row_activated)
         self.treeview_commands.connect('cursor-changed', self.event_treeview_cursor_changed)
 
-        renderer_text = Gtk.CellRendererText()
-        column_text = Gtk.TreeViewColumn("Type", renderer_text, text=0)
-        column_text.set_visible(False)
+        renderer_text = Gtk.CellRendererPixbuf()
+        column_text = Gtk.TreeViewColumn("Type", renderer_text, icon_name=0)
+        # column_text.set_visible(False)
         self.treeview_commands.append_column(column_text)
 
         renderer_text = Gtk.CellRendererText()

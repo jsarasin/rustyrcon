@@ -204,11 +204,13 @@ class MainWindow:
         self.entrycompletion_console.set_model(self.entrycompletion_liststore)
         self.entrycompletion_console.set_text_column(0)
 
-        self.button_console_view_settings = builder.get_object('button_console_view_settings')
-        self.button_console_view_settings.connect('clicked', self.event_button_console_view_settings)
         self.button_console_clear = builder.get_object('button_console_clear')
         self.button_console_clear.connect('clicked', self.event_button_console_clear_clicked)
         self.popover_console_visible = builder.get_object('popover_console_visible')
+
+        self.button_find_console = builder.get_object('button_find_console')
+        self.popover_search_console = builder.get_object('popover_search_console')
+        self.button_find_console.connect('clicked', self.event_button_find_console_click)
 
         # Players
         self.treeview_players = builder.get_object('treeview_players')
@@ -296,6 +298,13 @@ class MainWindow:
             if server['name'] == connection_name:
                 self.combo_servers.set_active(index)
                 break
+
+    ########################
+    ## GUI Event Handlers ##
+    ########################
+    def event_button_find_console_click(self, button):
+        self.popover_search_console.show_all()
+        self.popover_search_console.popup()
 
     def event_button_command_browser(self, button):
         self.command_browser.window.show_all()
@@ -467,23 +476,6 @@ class MainWindow:
         self.pyrcon.event_console_cb = self.pyrcon_event_console_message_received
         GLib.idle_add(self.connect)
 
-    def reset_interface(self):
-        start = self.textbuffer_console.get_start_iter()
-        end = self.textbuffer_console.get_end_iter()
-        self.textbuffer_console.delete(start, end)
-        self.liststore_players.clear()
-        self.entrycompletion_liststore.clear()
-
-    def connect(self):
-        try:
-            self.pyrcon.connect()
-        except HandshakeError:
-            print("Failed to connect")
-            del self.pyrcon
-            self.pyrcon = None
-            self.stack_connection_stage.set_visible_child_name('page0')
-
-
     def event_shutdown(self, widget, event):
         if self.pyrcon is not None:
             sys.stdout.flush()
@@ -522,20 +514,24 @@ class MainWindow:
         self.textentry_console.set_text('')
 
     def event_textentry_console_keypress(self, widget, eventkey):
-        print("casdtasd")
-        # Linux
-        UP = 111
-        DOWN = 116
-        # Windows
-        UP = 38
-        DOWN = 40
+        # print(eventkey.keyval)
+        # print(Gdk.KEY_uparrow)
+        # cat = Gdk.KeymapKey()
+        # snob = Gdk.Keymap.get_default().translate_keyboard_state(eventkey.keyval, eventkey.state, eventkey.group)
+        # print("Snob:", snob)
 
         MOVE_UP = -1
         MOVE_DOWN = 1
-        print(eventkey.hardware_keycode)
-        if eventkey.hardware_keycode == UP:
+
+        if eventkey.keyval == Gdk.KEY_Tab:
+            # Move the cursor to the end of the line
+            max = self.textentry_console.get_text_length()
+            self.textentry_console.set_position(max)
+            return True
+
+        if eventkey.keyval == Gdk.KEY_Up:
             move_direction = MOVE_UP
-        elif eventkey.hardware_keycode == DOWN:
+        elif eventkey.keyval == Gdk.KEY_Down:
             move_direction = MOVE_DOWN
         else:
             move_direction = 0
@@ -582,6 +578,21 @@ class MainWindow:
 
         return False
 
+    def reset_interface(self):
+        start = self.textbuffer_console.get_start_iter()
+        end = self.textbuffer_console.get_end_iter()
+        self.textbuffer_console.delete(start, end)
+        self.liststore_players.clear()
+        self.entrycompletion_liststore.clear()
+
+    def connect(self):
+        try:
+            self.pyrcon.connect()
+        except HandshakeError:
+            print("Failed to connect")
+            del self.pyrcon
+            self.pyrcon = None
+            self.stack_connection_stage.set_visible_child_name('page0')
 
     def connection_edit_form_to_struct(self):
         struct = dict()
