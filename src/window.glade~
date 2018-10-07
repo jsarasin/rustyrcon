@@ -1012,6 +1012,7 @@
   <object class="GtkPopover" id="popover_search_console">
     <property name="width_request">610</property>
     <property name="can_focus">False</property>
+    <property name="border_width">5</property>
     <property name="relative_to">textview_console</property>
     <child>
       <object class="GtkBox">
