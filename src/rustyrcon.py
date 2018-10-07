@@ -45,6 +45,7 @@ from ws4py.exc import HandshakeError
 from rust import RustMessageType, get_console_message_info
 
 from command_browser import WindowCommandBrowser
+from inventory_browser import WindowInventoryBrowser
 
 
 class BufferManager:
@@ -72,6 +73,8 @@ class MainWindow:
         self.console_history = []
         self.console_history_select = None
         self.console_history_moved = False
+
+        self.item_browser = None
 
         # Program data
         self.entity_list = None
@@ -174,6 +177,8 @@ class MainWindow:
         self.button_console_send.connect('clicked', self.event_button_console_send)
         self.button_command_browser = builder.get_object('button_command_browser')
         self.button_command_browser.connect('clicked', self.event_button_command_browser)
+        self.button_item_browser = builder.get_object('button_item_browser')
+        self.button_item_browser.connect('clicked', self.event_button_item_browser)
 
         self.textview_console = builder.get_object("textview_console")
         self.textbuffer_console = BetterBuffer()
@@ -308,6 +313,14 @@ class MainWindow:
 
     def event_button_command_browser(self, button):
         self.command_browser.window.show_all()
+
+    def event_button_item_browser(self, button):
+        if self.item_browser is None:
+            self.item_browser = WindowInventoryBrowser('/home/james/MEGAsync/Rust Server/items/')
+
+        self.item_browser.window.show_all()
+
+
 
     def event_button_console_clear_clicked(self, button):
         self.reset_interface()

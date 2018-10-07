@@ -602,7 +602,7 @@
                           <object class="GtkButton" id="button_find_console">
                             <property name="label">gtk-find</property>
                             <property name="visible">True</property>
-                            <property name="can_focus">True</property>
+                            <property name="can_focus">False</property>
                             <property name="receives_default">True</property>
                             <property name="use_stock">True</property>
                             <property name="always_show_image">True</property>

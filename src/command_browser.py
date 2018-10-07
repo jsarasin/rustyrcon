@@ -119,4 +119,3 @@ class WindowCommandBrowser:
         if self.activate_callback is not None:
             self.activate_callback(self.selected_command)
 
-
