@@ -522,11 +522,17 @@ class MainWindow:
         self.textentry_console.set_text('')
 
     def event_textentry_console_keypress(self, widget, eventkey):
+        print("casdtasd")
+        # Linux
         UP = 111
         DOWN = 116
+        # Windows
+        UP = 38
+        DOWN = 40
+
         MOVE_UP = -1
         MOVE_DOWN = 1
-
+        print(eventkey.hardware_keycode)
         if eventkey.hardware_keycode == UP:
             move_direction = MOVE_UP
         elif eventkey.hardware_keycode == DOWN:
@@ -575,6 +581,7 @@ class MainWindow:
             return True
 
         return False
+
 
     def connection_edit_form_to_struct(self):
         struct = dict()

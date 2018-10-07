@@ -162,8 +162,6 @@
                         <property name="border_width">0</property>
                         <property name="hscrollbar_policy">never</property>
                         <property name="shadow_type">in</property>
-                        <property name="propagate_natural_width">True</property>
-                        <property name="propagate_natural_height">True</property>
                         <child>
                           <object class="GtkTextView" id="textview_description">
                             <property name="visible">True</property>
