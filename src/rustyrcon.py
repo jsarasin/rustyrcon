@@ -21,6 +21,10 @@
 # 	Topologymap: 4 MB
 # 	Alphamap:    1 MB
 
+
+# TODO: Random crashes
+# Windows:
+#  E x p r e s s i o n :   C A I R O _ R E F E R E N C E _ C O U N T _ H A S _ R E F E R E N C E   ( & s u r f a c e - > r e f _ c o u n t )
 import time
 from datetime import datetime
 from datetime import timedelta
