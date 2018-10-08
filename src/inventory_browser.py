@@ -224,15 +224,48 @@ class WindowInventoryBrowser:
 
         for section in cat:
             if section == 'ItemDefinition':
-                name = cat[section]['displayName']['english']
-                shortname = cat[section]['shortname']
-                filename = self.item_browser.item_path + shortname + ".png"
-                pixy = GdkPixbuf.Pixbuf.new_from_file_at_scale(filename, 200, -1, True)
-                self.listbox_details.add(Gtk.Image.new_from_pixbuf(pixy))
-                self.listbox_details.add(Gtk.Label(name))
-                self.listbox_details.add(Gtk.Label(shortname))
+                self.details_listbox_add_definition_section(self.listbox_details, cat)
+            if section == 'ItemModProjectileSpawn':
+                self.details_listbox_add_itemmodprojectilespawn_section(self.listbox_details, cat)
 
         self.listbox_details.show_all()
+
+    def details_listbox_add_itemmodprojectilespawn_section(self, listbox, cat):
+        print(cat)
+        projectileVelocity = cat['ItemModProjectileSpawn']['projectileVelocity']
+        projectileVelocitySpread = cat['ItemModProjectileSpawn']['projectileVelocitySpread']
+        projectileSpread = cat['ItemModProjectileSpawn']['projectileSpread']
+
+        header = Gtk.Label('ItemModProjectileSpawn')
+        row = Gtk.ListBoxRow()
+        row.add(header)
+        row.set_activatable(False)
+
+        self.listbox_details.add(row)
+
+        self.listbox_details.add(Gtk.Label(projectileVelocity))
+        self.listbox_details.add(Gtk.Label(projectileVelocitySpread))
+        self.listbox_details.add(Gtk.Label(projectileSpread))
+
+    def details_listbox_add_definition_section(self, listbox, cat):
+        name = cat['ItemDefinition']['displayName']['english']
+        shortname = cat['ItemDefinition']['shortname']
+        filename = self.item_browser.item_path + shortname + ".png"
+        pixy = GdkPixbuf.Pixbuf.new_from_file_at_scale(filename, 200, -1, True)
+        item_id = cat['ItemDefinition']['itemid']
+
+        header = Gtk.Label('ItemDefinition')
+        row = Gtk.ListBoxRow()
+        row.add(header)
+        row.set_activatable(False)
+
+        self.listbox_details.add(row)
+
+        self.listbox_details.add(Gtk.Image.new_from_pixbuf(pixy))
+        self.listbox_details.add(Gtk.Label(name))
+        self.listbox_details.add(Gtk.Label(shortname))
+        self.listbox_details.add(Gtk.Label(shortname))
+        self.listbox_details.add(Gtk.Label("{}".format(item_id)))
 
     def event_togglebutton_details(self, button):
         if button.get_active():
@@ -257,5 +290,6 @@ class WindowInventoryBrowser:
         return True
 
 if __name__ == '__main__':
-    wib = WindowInventoryBrowser('/home/james/MEGAsync/Rust Server/items/', as_program=True)
+    # wib = WindowInventoryBrowser('/home/james/MEGAsync/Rust Server/items/', as_program=True)
+    wib = WindowInventoryBrowser('C:\\Program Files (x86)\\Steam\\steamapps\\common\\Rust\\Bundles\\items\\', as_program=True)
     Gtk.main()
