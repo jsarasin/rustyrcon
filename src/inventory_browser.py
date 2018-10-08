@@ -31,7 +31,7 @@ class RustItemBrowser:
                 assert(definition['shortname'] + ".txt" == item)
 
     def get_item_details(self, shortname):
-        if self.item_path is not None and False:
+        if self.item_path is not None:
             cat = RustItemBrowser.read_item_file(self.item_path / Path(shortname + ".txt"))
             return cat
         else:
@@ -50,9 +50,10 @@ class RustItemBrowser:
     @staticmethod
     def search_item_path():
         shared_default = Path('/home/james/MEGAsync/Rust Server/items/')
-        linux_default = Path('~/.steam/steam/steamapps/common/Rust/Bundles/items/')
+        linux_default = Path('~/.steam/steam/steamapps/common/Rust/Bundles/items/').expanduser()
         windows_default = Path('C:\\Program Files (x86)\\Steam\\steamapps\\common\\Rust\\Bundles\\items\\')
 
+        print(os.path.isdir(linux_default))
         if os.path.isdir(shared_default):
             return shared_default
 
@@ -158,6 +159,9 @@ class WindowInventoryBrowser:
         self.connect_builder_objects()
 
 
+        if self.item_browser.item_path is None:
+            self.infobar_pathnotfound.set_visible(True)
+            self.infobar_pathnotfound.set_revealed(True)
 
         # Build the model
         self.model = Gtk.TreeStore(int,str,str, GdkPixbuf.Pixbuf)
@@ -273,6 +277,8 @@ class WindowInventoryBrowser:
 
         self.listbox_details = builder.get_object('listbox_details')
 
+        self.infobar_pathnotfound = builder.get_object('infobar_pathnotfound')
+
         self.viewport_iconview_items.add(self.box_iconview_categories)
 
     def selected_item(self, shortname):
@@ -287,6 +293,8 @@ class WindowInventoryBrowser:
                 self.details_listbox_add_definition_section(self.listbox_details, cat)
             if section == 'ItemModProjectileSpawn':
                 self.details_listbox_add_itemmodprojectilespawn_section(self.listbox_details, cat)
+            if section == 'Builtin Data':
+                self.details_listbox_add_buildin_data(self.listbox_details, cat)
 
         self.listbox_details.show_all()
 
@@ -312,8 +320,20 @@ class WindowInventoryBrowser:
         shortname = model[iter][1]
         self.selected_item(shortname)
 
+    def details_listbox_add_buildin_data(self, listbox, cat):
+        shortname = cat['Builtin Data']['shortname']
+        name = cat['Builtin Data']['name']
+
+        header = Gtk.Label('Builtin Data')
+        row = Gtk.ListBoxRow()
+        row.add(header)
+        row.set_activatable(False)
+        self.listbox_details.add(row)
+
+        self.listbox_details.add(Gtk.Label(shortname))
+        self.listbox_details.add(Gtk.Label(name))
+
     def details_listbox_add_itemmodprojectilespawn_section(self, listbox, cat):
-        print(cat)
         projectileVelocity = cat['ItemModProjectileSpawn']['projectileVelocity']
         projectileVelocitySpread = cat['ItemModProjectileSpawn']['projectileVelocitySpread']
         projectileSpread = cat['ItemModProjectileSpawn']['projectileSpread']
