@@ -394,5 +394,8 @@ class WindowInventoryBrowser:
         return True
 
 if __name__ == '__main__':
+    settings = Gtk.Settings.get_default()
+    settings.props.gtk_application_prefer_dark_theme = True
+
     wib = WindowInventoryBrowser(as_program=True)
     Gtk.main()
