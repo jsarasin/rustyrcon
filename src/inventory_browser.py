@@ -182,6 +182,14 @@ class WindowInventoryBrowser:
         for category in self.item_browser.items_by_category:
             expander = Gtk.Expander.new(RustItemCategories[category])
             expander.set_expanded(False)
+            label_style = Gtk.RcStyle.new()
+            # label_style.fg = [Gdk.Color(1.0, 0.0, 0.0)]
+
+            # label_style.font_desc = Pango.FontDescription()
+            print(label_style.font_desc)
+            # label_style.font_desc.set_size(200)
+            label = expander.get_label_widget()
+            label.modify_style(label_style)
             expander.connect('activate', self.event_expander_toggle)
 
             icon_view = FluidIconView()

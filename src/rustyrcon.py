@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+# GTK_THEME Adwaita:dark
 # sudo -H pip3 install appdirs
 
 # TODO:
