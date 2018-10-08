@@ -16,7 +16,7 @@ class RustItemBrowser:
             self.initialize_item_data()
 
     def initialize_item_data(self):
-        files = os.listdir(self.item_path)
+        files = os.listdir(str(self.item_path))
 
         for item in files:
             if item[-4:] == ".txt":
@@ -50,18 +50,20 @@ class RustItemBrowser:
     @staticmethod
     def search_item_path():
         shared_default = Path('/home/james/MEGAsync/Rust Server/items/')
-        linux_default = Path('~/.steam/steam/steamapps/common/Rust/Bundles/items/').expanduser()
+        # linux_default = Path('~/.steam/steam/steamapps/common/Rust/Bundles/items/').expanduser()
+        linux_default = Path('~/.steam/steam/steamapps/common/Rust/Bundles/items/')
         windows_default = Path('C:\\Program Files (x86)\\Steam\\steamapps\\common\\Rust\\Bundles\\items\\')
 
-        print(os.path.isdir(linux_default))
+        if os.path.isdir(str(windows_default)):
+            return windows_default
+
+        #print(os.path.isdir(linux_default))
         if os.path.isdir(shared_default):
             return shared_default
 
         if os.path.isdir(linux_default):
             return linux_default
 
-        if os.path.isdir(windows_default):
-            return windows_default
 
         return None
 
@@ -95,7 +97,7 @@ class RustItemBrowser:
                               'ItemFootstepSounds',
                               'ItemModContainerRestriction']
 
-        with open(filename,'r') as f:
+        with open(str(filename),'r') as f:
             line = f.readline()
             assert(line == "This file is provided for informational purposes only. Changes aren't reflected in game.\n")
             line = f.readline()
