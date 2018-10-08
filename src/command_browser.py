@@ -3,6 +3,9 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GdkPixbuf, GObject, GLib, Gdk, cairo, Gio, Pango, GObject
 from betterbuffer import BetterBuffer, scroll_to_textview_bottom
 
+from shared import CommandBrowserModel
+
+
 class WindowCommandBrowserItemType:
     COMMAND = 'emblem-system'
     VARIABLE = 'dialog-information'
@@ -55,14 +58,22 @@ class WindowCommandBrowser:
         self.treeview_commands.connect('row-activated', self.event_treeview_command_row_activated)
         self.treeview_commands.connect('cursor-changed', self.event_treeview_cursor_changed)
 
+        # Empty Column for expander
+        renderer_text = Gtk.CellRendererText()
+        column_text = Gtk.TreeViewColumn("", renderer_text)
+        column_text.set_fixed_width(20)
+        self.treeview_commands.append_column(column_text)
+
         renderer_text = Gtk.CellRendererPixbuf()
         column_text = Gtk.TreeViewColumn("Type", renderer_text, icon_name=0)
+        column_text.set_fixed_width(20)
         # column_text.set_visible(False)
         self.treeview_commands.append_column(column_text)
 
         renderer_text = Gtk.CellRendererText()
         column_text = Gtk.TreeViewColumn("Name", renderer_text, text=1)
         self.treeview_commands.append_column(column_text)
+
         column_text = Gtk.TreeViewColumn("Description", renderer_text, text=2)
         column_text.set_visible(False)
         self.treeview_commands.append_column(column_text)
@@ -119,3 +130,11 @@ class WindowCommandBrowser:
         if self.activate_callback is not None:
             self.activate_callback(self.selected_command)
 
+
+if __name__ == '__main__':
+    print("Command Browser directly executed for testing purposes")
+    settings = Gtk.Settings.get_default()
+    settings.props.gtk_application_prefer_dark_theme = True
+
+    wib = WindowCommandBrowser()
+    Gtk.main()

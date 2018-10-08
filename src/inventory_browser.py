@@ -7,9 +7,9 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GdkPixbuf, GObject, GLib, Gdk, cairo, Gio, Pango, GObject
 
 
-class RustItemBrowser:
+class RustItemBrowserModel:
     def __init__(self):
-        self.item_path = RustItemBrowser.search_item_path()
+        self.item_path = RustItemBrowserModel.search_item_path()
         self.items_by_category = dict()
 
         if self.item_path is not None:
@@ -20,7 +20,7 @@ class RustItemBrowser:
 
         for item in files:
             if item[-4:] == ".txt":
-                definition = RustItemBrowser.read_item_file(self.item_path / item, just_definition=True)
+                definition = RustItemBrowserModel.read_item_file(self.item_path / item, just_definition=True)
                 definition = definition['ItemDefinition']
 
                 if definition['category'] not in self.items_by_category:
@@ -32,7 +32,7 @@ class RustItemBrowser:
 
     def get_item_details(self, shortname):
         if self.item_path is not None:
-            cat = RustItemBrowser.read_item_file(self.item_path / Path(shortname + ".txt"))
+            cat = RustItemBrowserModel.read_item_file(self.item_path / Path(shortname + ".txt"))
             return cat
         else:
             cat = dict()
@@ -138,6 +138,8 @@ RustItemCategories[9] = "Traps"
 RustItemCategories[10] = "Bullshit/Door Key Lock"
 RustItemCategories[13] = "Intermediate Items"
 
+# This is a small wrapper allow IconView which handles the correct propagation of events when this widget changes its
+# side.
 class FluidIconView (Gtk.IconView):
     def __init__ (self):
         Gtk.IconView.__init__ (self)
@@ -152,7 +154,7 @@ class FluidIconView (Gtk.IconView):
 class WindowInventoryBrowser:
     def __init__(self, as_program=False):
         self.is_program = as_program
-        self.item_browser = RustItemBrowser()
+        self.item_browser = RustItemBrowserModel()
         self.icon_views = []
         self.ignore_selection = False
         self.pixbuf_missing_image = Gtk.IconTheme.get_default().load_icon('image-missing', 64, Gtk.IconLookupFlags.FORCE_SIZE)
@@ -186,7 +188,6 @@ class WindowInventoryBrowser:
             # label_style.fg = [Gdk.Color(1.0, 0.0, 0.0)]
 
             # label_style.font_desc = Pango.FontDescription()
-            print(label_style.font_desc)
             # label_style.font_desc.set_size(200)
             label = expander.get_label_widget()
             label.modify_style(label_style)
@@ -265,9 +266,10 @@ class WindowInventoryBrowser:
 
         self.window = builder.get_object('window_inventory_browser')
         if self.is_program:
-            self.window.connect("delete-event", Gtk.main_quit)
+            self.window.connect("delete-event", self.event_window_close)
         else:
             self.window.connect("delete-event", self.event_window_close)
+
         self.viewport_iconview_items = builder.get_object('viewport_iconview_items')
         self.box_iconview_categories = Gtk.Box(Gtk.Orientation.VERTICAL, 5)
         self.box_iconview_categories.set_orientation(Gtk.Orientation.VERTICAL)
@@ -396,12 +398,17 @@ class WindowInventoryBrowser:
         if radiobutton == self.radiotoolbutton_iconview:
             self.stack_viewtype.set_visible_child_name('stackview_icon')
 
-
     def event_window_close(self, window, event):
-        self.window.hide()
-        return True
+        print("sdf")
+        if self.is_program:
+            Gtk.main_quit()
+        else:
+            print("WINDOW CLOSE")
+            self.window.hide()
+            return True
 
 if __name__ == '__main__':
+    print("Asdf")
     settings = Gtk.Settings.get_default()
     settings.props.gtk_application_prefer_dark_theme = True
 

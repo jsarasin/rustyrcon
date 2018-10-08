@@ -317,7 +317,7 @@ class MainWindow:
 
     def event_button_item_browser(self, button):
         if self.item_browser is None:
-            self.item_browser = WindowInventoryBrowser('/home/james/MEGAsync/Rust Server/items/')
+            self.item_browser = WindowInventoryBrowser()
 
         self.item_browser.window.show_all()
 
