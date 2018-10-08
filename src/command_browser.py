@@ -34,7 +34,7 @@ class WindowCommandBrowser:
 
         # Convert this organized list into a Gtk.TreeStore
         self.treestore_commands = Gtk.TreeStore(str, str, str)
-        for root in command_breakdown:
+        for root in sorted(command_breakdown):
             parent = self.treestore_commands.append(None, [WindowCommandBrowserItemType.CATAGORY, root, ''])
             for cattype, command, description in command_breakdown[root]:
                 self.treestore_commands.append(parent, [cattype, command, description])
