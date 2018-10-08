@@ -664,8 +664,13 @@ class MainWindow:
 
         tags = []
         message_info = get_console_message_info(message)
-        if message_info['message_type'] != RustMessageType.UNKNOWN:
-            tags.append(self.textbuffer_console.get_tag_table().lookup("mtype" + str(message_info['message_type'])))
+
+        try:
+            if message_info['message_type'] != RustMessageType.UNKNOWN:
+                tags.append(self.textbuffer_console.get_tag_table().lookup("mtype" + str(message_info['message_type'])))
+        except TypeError:
+            print("Type Error:", message_info)
+
 
         if first_item:
             console_message = ''

@@ -1,6 +1,6 @@
 import os
 import json
-
+from pathlib import Path
 
 import gi
 gi.require_version('Gtk', '3.0')
@@ -8,15 +8,19 @@ from gi.repository import Gtk, GdkPixbuf, GObject, GLib, Gdk, cairo, Gio, Pango,
 
 
 class RustItemBrowser:
-    def __init__(self, path):
-        self.item_path = path
+    def __init__(self):
+        self.item_path = RustItemBrowser.search_item_path()
         self.items_by_category = dict()
 
+        if self.item_path is not None:
+            self.initialize_item_data()
+
+    def initialize_item_data(self):
         files = os.listdir(self.item_path)
 
         for item in files:
             if item[-4:] == ".txt":
-                definition = RustItemBrowser.read_item_file(path + item, just_definition=True)
+                definition = RustItemBrowser.read_item_file(self.item_path / item, just_definition=True)
                 definition = definition['ItemDefinition']
 
                 if definition['category'] not in self.items_by_category:
@@ -26,6 +30,39 @@ class RustItemBrowser:
 
                 assert(definition['shortname'] + ".txt" == item)
 
+    def get_item_details(self, shortname):
+        if self.item_path is not None and False:
+            cat = RustItemBrowser.read_item_file(self.item_path / Path(shortname + ".txt"))
+            return cat
+        else:
+            cat = dict()
+            cat['Builtin Data'] = {'shortname':'test.cat', 'name':'Test Cat'}
+            return cat
+
+    def get_pixbuf_from_shortname(self, shortname, desired_size):
+        if self.item_path is not None:
+            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(str(self.item_path / shortname) + ".png", desired_size, -1, True)
+        else:
+            pixbuf = Gtk.IconTheme.get_default().load_icon('image-missing', desired_size, Gtk.IconLookupFlags.FORCE_SIZE)
+
+        return pixbuf
+
+    @staticmethod
+    def search_item_path():
+        shared_default = Path('/home/james/MEGAsync/Rust Server/items/')
+        linux_default = Path('~/.steam/steam/steamapps/common/Rust/Bundles/items/')
+        windows_default = Path('')
+
+        if os.path.isdir(shared_default):
+            return shared_default
+
+        if os.path.isdir(linux_default):
+            return linux_default
+
+        if os.path.isdir(windows_default):
+            return windows_default
+
+        return None
 
     @staticmethod
     def read_item_file(filename, just_definition=False):
@@ -109,14 +146,14 @@ class FluidIconView (Gtk.IconView):
     def on_size_allocate (self, allocation):
         [self.set_columns (m) for m in [1,self.get_columns ()]]
 
-
-
 class WindowInventoryBrowser:
-    def __init__(self, items_dir, as_program=False):
+    def __init__(self, as_program=False):
         self.is_program = as_program
-        self.item_browser = RustItemBrowser(items_dir)
+        self.item_browser = RustItemBrowser()
         self.icon_views = []
         self.ignore_selection = False
+        self.pixbuf_missing_image = Gtk.IconTheme.get_default().load_icon('image-missing', 64, Gtk.IconLookupFlags.FORCE_SIZE)
+        self.expander_models = dict()
 
         self.connect_builder_objects()
 
@@ -128,7 +165,11 @@ class WindowInventoryBrowser:
             category_iter = self.model.append(None, [int(category), RustItemCategories[category], '', None])
 
             for item in sorted(self.item_browser.items_by_category[category], key=lambda item: item['shortname']):
-                self.model.append(category_iter, [int(item['category']), item['shortname'], item['displayName']['english'], GdkPixbuf.Pixbuf.new_from_file_at_scale(items_dir + item['shortname'] + ".png", 64, -1, True)])
+                pixbuf = self.pixbuf_missing_image
+                self.model.append(category_iter, [int(item['category']),
+                                                  item['shortname'],
+                                                  item['displayName']['english'],
+                                                  pixbuf])
 
 
         # Build the UI components for icon view
@@ -149,14 +190,10 @@ class WindowInventoryBrowser:
             icon_view.connect('selection-changed', self.event_iconview_selection_changed)
             self.icon_views.append(icon_view)
 
-            # scrolled_window = Gtk.ScrolledWindow(None, None)
-            # scrolled_window.set_policy( Gtk.PolicyType.AUTOMATIC,  Gtk.PolicyType.NEVER)
-            # scrolled_window.set_propagate_natural_height(True)
-            # scrolled_window.set_vexpand(True)
-            # scrolled_window.add(icon_view)
             expander.add(icon_view)
             self.box_iconview_categories.pack_start(expander, False, False, 0)
-            # self.box_iconview_categories.add(expander)
+
+            self.expander_models[expander] = this_model
 
         renderer_text = Gtk.CellRendererText()
         column_text = Gtk.TreeViewColumn("Name", renderer_text, text=1)
@@ -182,11 +219,31 @@ class WindowInventoryBrowser:
         treepath = iconview.get_selected_items()
         if len(treepath) == 1:
             iter = iconview.get_model().get_iter(treepath)
-            self.selected_item(iconview.get_model()[iter][1], iconview.get_model()[iter][3])
+            self.selected_item(iconview.get_model()[iter][1])
 
 
     def event_expander_toggle(self, expander):
         self.viewport_iconview_items.get_parent().check_resize()
+        model = self.expander_models[expander]
+
+        if model is not None:
+            GLib.idle_add(self.load_model_icons, expander, model)
+
+    def load_model_icons(self, expander, model):
+        iter = model.get_iter_first()
+
+        if iter is None:
+            self.expander_models[expander] = None
+            return
+
+        while True:
+            pixbuf = self.item_browser.get_pixbuf_from_shortname(model[iter][1], 64)
+            model[iter][3] = pixbuf
+
+            iter = model.iter_next(iter)
+            if iter is None:
+                break
+        self.expander_models[expander] = None
 
     def connect_builder_objects(self):
         builder = Gtk.Builder()
@@ -211,28 +268,55 @@ class WindowInventoryBrowser:
         self.togglebutton_details.connect('toggled', self.event_togglebutton_details)
         self.revealer_details = builder.get_object('revealer_details')
         self.treeview_items = builder.get_object('treeview_items')
+        self.treeview_items.connect('row-activated', self.event_treeview_items_row_activated)
+        self.treeview_items.connect('cursor-changed', self.event_treeview_items_changed)
 
         self.listbox_details = builder.get_object('listbox_details')
 
         self.viewport_iconview_items.add(self.box_iconview_categories)
 
-    def selected_item(self, shortname, pixbuf):
+    def selected_item(self, shortname):
         for widget in self.listbox_details.get_children():
             widget.destroy()
 
-        cat = RustItemBrowser.read_item_file(self.item_browser.item_path + shortname + ".txt")
+        # cat = RustItemBrowser.read_item_file(self.item_browser.item_path + shortname + ".txt")
+        cat = self.item_browser.get_item_details(shortname)
 
         for section in cat:
             if section == 'ItemDefinition':
                 name = cat[section]['displayName']['english']
                 shortname = cat[section]['shortname']
-                filename = self.item_browser.item_path + shortname + ".png"
-                pixy = GdkPixbuf.Pixbuf.new_from_file_at_scale(filename, 200, -1, True)
+                # filename = self.item_browser.item_path + shortname + ".png"
+                # pixy = GdkPixbuf.Pixbuf.new_from_file_at_scale(filename, 200, -1, True)
+                pixy = self.item_browser.get_pixbuf_from_shortname(shortname, 200)
                 self.listbox_details.add(Gtk.Image.new_from_pixbuf(pixy))
                 self.listbox_details.add(Gtk.Label(name))
                 self.listbox_details.add(Gtk.Label(shortname))
 
         self.listbox_details.show_all()
+
+    def event_treeview_items_row_activated(self, treeview, path, column):
+        if path.get_depth() == 1:
+            if treeview.row_expanded(path):
+                treeview.collapse_row(path)
+            else:
+                treeview.expand_row(path, True)
+            return False
+
+
+    def event_treeview_items_changed(self, treeview):
+        model, iter = treeview.get_selection().get_selected()
+        if iter is None:
+            return
+
+        parent_iter = model.iter_parent(iter)
+
+        if parent_iter is None:
+            return
+
+        shortname = model[iter][1]
+        self.selected_item(shortname)
+
 
     def event_togglebutton_details(self, button):
         if button.get_active():
@@ -257,5 +341,5 @@ class WindowInventoryBrowser:
         return True
 
 if __name__ == '__main__':
-    wib = WindowInventoryBrowser('/home/james/MEGAsync/Rust Server/items/', as_program=True)
+    wib = WindowInventoryBrowser(as_program=True)
     Gtk.main()

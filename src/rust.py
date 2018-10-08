@@ -89,7 +89,8 @@ def get_console_message_info(message):
         # Begin loading the game resources
         m = re.search(load_begin, message)
         if m is not None:
-            return RustMessageType.LOAD_BEGIN
+            result['message_type'] = RustMessageType.LOAD_BEGIN
+            return result
 
         # Joined loading the game
         m = re.search(joined, message)
