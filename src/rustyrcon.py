@@ -870,6 +870,8 @@ class MainWindow:
         end = self.textbuffer_chat.get_end_iter()
         self.textbuffer_chat.delete(start, end)
 
+settings = Gtk.Settings.get_default()
+settings.props.gtk_application_prefer_dark_theme = True
 
 def launch_app():
     mw = MainWindow()
