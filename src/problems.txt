@@ -1,0 +1,23 @@
+Buddy's Computer
+------------------------------------------------------------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Python34\lib\encodings\idna.py", line 165, in encode
+    raise UnicodeError("label empty or too long")
+UnicodeError: label empty or too long
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:/Users/Buddy/Documents/GitHub/rustyrcon/src/rustyrcon.py", line 486, in event_button_connect_clicked
+    self.pyrcon = PyRCON("ws://" + server['address'] + ':' + server['port'] + '/' + server['password'], protocols=['http-only', 'chat'])
+  File "C:\Users\Buddy\Documents\GitHub\rustyrcon\src\pyrcon.py", line 39, in __init__
+    super(PyRCON, self).__init__(*args, **kargs)
+  File "C:\Python34\lib\site-packages\ws4py\client\threadedclient.py", line 35, in __init__
+    ssl_options, headers=headers, exclude_headers=exclude_headers)
+  File "C:\Python34\lib\site-packages\ws4py\client\__init__.py", line 100, in __init__
+    0, socket.AI_PASSIVE)[0]
+  File "C:\Python34\lib\socket.py", line 530, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+UnicodeError: encoding with 'idna' codec failed (UnicodeError: label empty or too long)
+------------------------------------------------------------------------------------------------------------------------
+
