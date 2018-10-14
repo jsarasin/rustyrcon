@@ -357,9 +357,9 @@ class WindowInventoryBrowser:
 
         self.listbox_details.add(row)
 
-        self.listbox_details.add(Gtk.Label(projectileVelocity))
-        self.listbox_details.add(Gtk.Label(projectileVelocitySpread))
-        self.listbox_details.add(Gtk.Label(projectileSpread))
+        self.lb_add_detail("Velocity", projectileVelocity)
+        self.lb_add_detail("Spread", projectileVelocitySpread)
+        self.lb_add_detail("Speed", projectileSpread)
 
     def details_listbox_add_definition_section(self, listbox, cat):
         name = cat['ItemDefinition']['displayName']['english']
@@ -375,10 +375,21 @@ class WindowInventoryBrowser:
         self.listbox_details.add(row)
 
         self.listbox_details.add(Gtk.Image.new_from_pixbuf(pixy))
-        self.listbox_details.add(Gtk.Label(name))
-        self.listbox_details.add(Gtk.Label(shortname))
-        self.listbox_details.add(Gtk.Label(shortname))
-        self.listbox_details.add(Gtk.Label("{}".format(item_id)))
+        self.lb_add_detail("Title", name)
+        self.lb_add_detail("Shortname", shortname)
+        self.lb_add_detail("ID", "{}".format(item_id))
+        # self.listbox_details.add()
+        # self.listbox_details.add()
+        # self.listbox_details.add()
+        # self.listbox_details.add()
+
+    def lb_add_detail(self, key, value):
+        box = Gtk.Box()
+        box.set_orientation(Gtk.Orientation.HORIZONTAL)
+        box.pack_start(Gtk.Label(key), False, True,0)
+        box.pack_end(Gtk.Label(value), False, True,0)
+
+        self.listbox_details.add(box)
 
 
     def event_togglebutton_details(self, button):

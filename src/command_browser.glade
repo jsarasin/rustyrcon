@@ -2,6 +2,18 @@
 <!-- Generated with glade 3.22.1 -->
 <interface>
   <requires lib="gtk+" version="3.18"/>
+  <object class="GtkMenu">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <child>
+      <object class="GtkMenuItem" id="copy_menu_item">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="label" translatable="yes">Copy</property>
+        <property name="use_underline">True</property>
+      </object>
+    </child>
+  </object>
   <object class="GtkFileFilter" id="filefilter1">
     <mime-types>
       <mime-type>text/directory</mime-type>
@@ -227,7 +239,7 @@
     </child>
   </object>
   <object class="GtkWindow" id="window_inventory_browser">
-    <property name="width_request">880</property>
+    <property name="width_request">910</property>
     <property name="height_request">600</property>
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Item Browser</property>
@@ -461,7 +473,7 @@
                     <property name="orientation">vertical</property>
                     <child>
                       <object class="GtkLabel">
-                        <property name="width_request">220</property>
+                        <property name="width_request">250</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">Item Details</property>
@@ -476,6 +488,10 @@
                       <object class="GtkListBox" id="listbox_details">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
+                        <property name="margin_left">3</property>
+                        <property name="margin_right">3</property>
+                        <property name="margin_top">3</property>
+                        <property name="margin_bottom">3</property>
                         <child>
                           <object class="GtkListBoxRow">
                             <property name="width_request">100</property>

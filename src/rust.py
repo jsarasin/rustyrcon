@@ -8,13 +8,12 @@ class RustMessageType:
     MANIFEST_UPDATE = 15
     CHAT = 16
     ENTER_GAME = 17
-    DISCONNECT_GAME = 18
+    DISCONNECT = 18
     KILLED_BY_PLAYER = 19
     KILLED_BY_ENTITY = 20
     SUICIDE = 21
     UNKNOWN = 22
     JOINED = 23
-    DISCONNECT_FAILED = 24
     SERVERVAR = 25
     EXCEPTION = 26
 
@@ -28,8 +27,7 @@ def get_console_message_info(message):
     load_begin = r'(.+):([0-9]*)\/([0-9]*)\/([^\ ]*)\ has\ auth\ level\ ([0-9])'
     joined = r'(.+):([0-9]*)\/([0-9]*)\/([^\ ]*)\ joined\ \[([^/]+)\/([0-9]+)\]'
     entered = r'([^\ ]*)\[([0-9]*)\/([0-9]*)\]\ has\ entered\ the\ game'
-    disconnect = r'(.+):([0-9]*)\/([0-9]*)\/([^\ ]*)\ disconnecting\:\ closing'
-    disconnect_failed = r'(.+):([0-9]*)\/([0-9]*)\/([^\ ]*)\ disconnecting\:\ disconnect'
+    disconnecting = r'(.+):([0-9]*)\/([0-9]*)\/(.*)(?=disconnecting)disconnecting\:\ (.*)'
     chat = r'\[CHAT\]\ ([^[]*)\[([0-9]*)\/([0-9]*)\]\ \:\ (.*)(?:$|\n)'
     exception = r'Exception|exception'
     result = dict()
@@ -112,21 +110,13 @@ def get_console_message_info(message):
             return result
 
         # Disconnect
-        m = re.search(disconnect, message)
+        m = re.search(disconnecting, message)
         if m is not None:
-            result['message_type'] = RustMessageType.DISCONNECT_GAME
+            result['message_type'] = RustMessageType.DISCONNECT
             result['ip'] = m.group(1)
             result['steam_id'] = m.group(3)
             result['player_name'] = m.group(4)
-            return result
-
-        # Disconnect failed
-        m = re.search(disconnect_failed, message)
-        if m is not None:
-            result['message_type'] = RustMessageType.DISCONNECT_FAILED
-            result['ip'] = m.group(1)
-            result['steam_id'] = m.group(3)
-            result['player_name'] = m.group(4)
+            result['disconnect_type'] = m.group(5)
             return result
 
         # Chat
@@ -154,7 +144,4 @@ def get_console_message_info(message):
 
     result['message_type'] = RustMessageType.UNKNOWN
     return result
-
-    # print('reg:', m)
-    # print('groups:', m.groups())
 

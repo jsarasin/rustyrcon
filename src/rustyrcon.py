@@ -45,9 +45,10 @@ from betterbuffer import BetterBuffer, scroll_to_textview_bottom
 from ws4py.exc import HandshakeError
 from rust import RustMessageType, get_console_message_info
 
-from command_browser import WindowCommandBrowser
+from command_browser import WindowCommandBrowser, CommandBrowserModel
 from inventory_browser import WindowInventoryBrowser
 
+from shared import RustyRCONSharedState
 
 class BufferManager:
     def __init__(self, buffer):
@@ -194,8 +195,7 @@ class MainWindow:
         self.textbuffer_console.create_tag('mtype' + str(RustMessageType.SAVE), foreground='darkgrey')
         self.textbuffer_console.create_tag('mtype' + str(RustMessageType.SERVERVAR), foreground='lightyellow')
         self.textbuffer_console.create_tag('mtype' + str(RustMessageType.CONNECT))
-        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.DISCONNECT_GAME), foreground='Red')
-        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.DISCONNECT_FAILED), foreground='Red')
+        self.textbuffer_console.create_tag('mtype' + str(RustMessageType.DISCONNECT), foreground='Red')
         self.textbuffer_console.create_tag('mtype' + str(RustMessageType.LOAD_BEGIN), foreground='Red')
         self.textbuffer_console.create_tag('mtype' + str(RustMessageType.CHAT))
         self.textbuffer_console.create_tag('mtype' + str(RustMessageType.ENTER_GAME), foreground='Green')
@@ -207,8 +207,6 @@ class MainWindow:
 
         self.treeview_players = builder.get_object("treeview_players")
         self.entrycompletion_console = builder.get_object("entrycompletion_console")
-        self.entrycompletion_console.set_model(self.entrycompletion_liststore)
-        self.entrycompletion_console.set_text_column(0)
 
         self.button_console_clear = builder.get_object('button_console_clear')
         self.button_console_clear.connect('clicked', self.event_button_console_clear_clicked)
@@ -743,6 +741,7 @@ class MainWindow:
         scroll_to_textview_bottom(self.textview_chat)
         self.textentry_chat_message.set_text('')
 
+    ################## REMOVE REMOVE
     def build_console_entry_completion(self, commands, variables):
         for command in commands:
             self.entrycompletion_liststore.append([command[0]])
@@ -823,10 +822,19 @@ class MainWindow:
             description = command[command.index(')') + 1:].strip()
             commands.append((command_name, description))
 
-        self.build_console_entry_completion(commands, variables)
+        # self.build_console_entry_completion(commands, variables)
 
-        self.command_browser = WindowCommandBrowser(commands, variables)
+        # Initialize our model containing all console commands/variables
+        RustyRCONSharedState.command_browser_model = CommandBrowserModel(commands, variables)
+
+        # Setup the command browser window
+        self.command_browser = WindowCommandBrowser()
         self.command_browser.activate_callback = self.cb_set_console_command
+
+        # Setup entry completion for an empty console line
+        self.entrycompletion_console.set_model(RustyRCONSharedState.command_browser_model.get_treestore_roots())
+        self.entrycompletion_console.set_text_column(0)
+
 
     def pyrcon_cb_player_update(self, message):
         data = json.loads(message)

@@ -3,48 +3,19 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GdkPixbuf, GObject, GLib, Gdk, cairo, Gio, Pango, GObject
 from betterbuffer import BetterBuffer, scroll_to_textview_bottom
 
-from shared import CommandBrowserModel
+from shared import CommandBrowserModel, WindowCommandBrowserItemType
+from shared import RustyRCONSharedState
 
-
-class WindowCommandBrowserItemType:
-    COMMAND = 'emblem-system'
-    VARIABLE = 'dialog-information'
-    CATAGORY = 'folder'
 
 class WindowCommandBrowser:
-    def __init__(self, command_list, variable_list):
+    def __init__(self):
         self.activate_callback = None
         self.connect_builder_objects()
         self.selected_command = None
 
 
-        # Organize the list of commands and variables, it _should_ be in order, but maybe not
-        command_breakdown = dict()
-        for breakup, description in command_list:
-            root, _, command = breakup.partition('.')
-            if root not in command_breakdown:
-                command_breakdown[root] = []
-
-            command_breakdown[root].append((WindowCommandBrowserItemType.COMMAND, command, description))
-
-        for breakup, description, default_value in variable_list:
-            root, _, command = breakup.partition('.')
-            if root not in command_breakdown:
-                command_breakdown[root] = []
-
-            command_breakdown[root].append((WindowCommandBrowserItemType.VARIABLE, command, description + "\nDefault: " + default_value))
-
-
-        # Convert this organized list into a Gtk.TreeStore
-        self.treestore_commands = Gtk.TreeStore(str, str, str)
-        for root in sorted(command_breakdown):
-            parent = self.treestore_commands.append(None, [WindowCommandBrowserItemType.CATAGORY, root, ''])
-            for cattype, command, description in command_breakdown[root]:
-                self.treestore_commands.append(parent, [cattype, command, description])
-
         # Show the TreeStore
-        self.treeview_commands.set_model(self.treestore_commands)
-
+        self.treeview_commands.set_model(RustyRCONSharedState.command_browser_model.get_treestore_root_organized())
 
     def connect_builder_objects(self):
         builder = Gtk.Builder()
