@@ -39,7 +39,8 @@ from appdirs import user_data_dir
 
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, GdkPixbuf, GObject, GLib, Gdk, cairo, Gio, Pango, GObject
+from gi.repository import Gtk, GLib, Gdk, Pango, GObject
+# from gi.repository import Gtk, GdkPixbuf, GObject, GLib, Gdk, cairo, Gio, Pango, GObject
 from betterbuffer import BetterBuffer, scroll_to_textview_bottom
 
 from ws4py.exc import HandshakeError

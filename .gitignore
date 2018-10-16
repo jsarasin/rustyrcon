@@ -9,3 +9,6 @@
 .idea
 *.pyc
 plugins/*
+dist
+build
+rustyrcon.spec
